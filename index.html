@@ -4,1199 +4,883 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulk ID Card Generator</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.5/JsBarcode.all.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --surface2: #21262d;
-    --border: #30363d;
-    --accent: #2563eb;
-    --accent2: #10b981;
-    --text: #e6edf3;
-    --text2: #8b949e;
-    --danger: #f85149;
-    --sidebar-w: 380px;
+    --primary: #2d3a8c;
+    --accent: #c9a84c;
+    --band: #b07fa3;
+    --cream: #f8f5ee;
+    --dark: #1a2260;
+    --glass: rgba(255,255,255,0.7);
+    --shadow: 0 8px 32px rgba(44,58,140,0.13);
   }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+    background: linear-gradient(135deg, #e8e0f0 0%, #d6e4f7 50%, #e0f0e8 100%);
+    min-height: 100vh;
+    color: #1a2260;
   }
 
   /* HEADER */
-  .app-header {
-    background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
+  header {
+    background: linear-gradient(90deg, #2d3a8c 0%, #4a3580 100%);
+    padding: 18px 40px;
     display: flex;
     align-items: center;
-    gap: 14px;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 10;
-  }
-  .app-header::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+    gap: 18px;
+    box-shadow: 0 4px 20px rgba(44,58,140,0.3);
   }
   .logo-icon {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 8px;
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, #c9a84c, #f0d080);
+    border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
+    font-size: 22px;
   }
-  .app-header h1 {
+  header h1 {
     font-family: 'Playfair Display', serif;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
+    color: #fff;
+    font-size: 1.6rem;
+    letter-spacing: 0.5px;
   }
-  .app-header span {
-    font-size: 12px;
-    color: var(--text2);
+  header p { color: rgba(255,255,255,0.6); font-size: 0.82rem; margin-top: 2px; }
+  .header-right {
     margin-left: auto;
+    display: flex; gap: 10px;
   }
+  .stat-pill {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    border-radius: 50px;
+    padding: 6px 16px;
+    font-size: 0.82rem;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-num { font-weight: 700; color: #f0d080; font-size: 1rem; }
 
   /* LAYOUT */
-  .app-body {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+  .main { display: grid; grid-template-columns: 380px 1fr; gap: 0; min-height: calc(100vh - 74px); }
 
   /* SIDEBAR */
   .sidebar {
-    width: var(--sidebar-w);
-    min-width: var(--sidebar-w);
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .sidebar-scroll {
-    flex: 1;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(16px);
+    border-right: 1px solid rgba(200,190,220,0.3);
+    padding: 28px 24px;
     overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    max-height: calc(100vh - 74px);
+    position: sticky; top: 0;
   }
-  .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-  .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-  .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .section {
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 14px;
-    margin-bottom: 14px;
-  }
-  .section:last-child { border-bottom: none; }
   .section-title {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    color: var(--text2);
-    margin-bottom: 10px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--primary);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
   }
-
-  label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 4px; margin-top: 8px; }
-  label:first-child { margin-top: 0; }
-  input[type="text"], input[type="number"] {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    padding: 7px 10px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accent); }
-
-  /* ALIGN TOGGLE */
-  .align-group { display: flex; gap: 4px; }
-  .align-btn {
+  .section-title::after {
+    content: '';
     flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 6px;
-    cursor: pointer;
-    color: var(--text2);
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s;
-  }
-  .align-btn:hover { border-color: var(--accent); color: var(--text); }
-  .align-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .align-btn svg { width: 14px; height: 14px; display: block; }
-
-  /* COLOR CONTROL */
-  .color-row { display: flex; gap: 6px; align-items: center; }
-  .color-row input[type="color"] {
-    width: 36px; height: 32px;
-    padding: 2px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface2);
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  .color-row input[type="text"] { flex: 1; font-family: monospace; font-size: 12px; }
-
-  /* SLIDER */
-  .slider-row { display: flex; gap: 8px; align-items: center; }
-  input[type="range"] {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 4px;
-    background: var(--surface2);
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
     border-radius: 2px;
-    outline: none;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-  }
-  .slider-val {
-    font-size: 12px;
-    color: var(--text2);
-    min-width: 30px;
-    text-align: right;
+    margin-left: 8px;
   }
 
-  /* DROP ZONES */
-  .dropzone {
-    border: 1.5px dashed var(--border);
-    border-radius: 8px;
+  /* FORM */
+  .form-group { margin-bottom: 14px; }
+  label { font-size: 0.78rem; font-weight: 600; color: #4a4a7a; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  input[type="text"], input[type="email"], textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #ddd8ee;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: #1a2260;
+    background: #fcfaff;
+    transition: border 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  input[type="text"]:focus, input[type="email"]:focus, textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(45,58,140,0.08);
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  /* PHOTO UPLOAD */
+  .photo-upload {
+    border: 2px dashed #c5bde8;
+    border-radius: 12px;
     padding: 16px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s;
+    background: #faf8ff;
     position: relative;
     overflow: hidden;
   }
-  .dropzone:hover, .dropzone.drag-over {
-    border-color: var(--accent);
-    background: rgba(37, 99, 235, 0.06);
-  }
-  .dropzone input[type="file"] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-  }
-  .dropzone-icon { font-size: 22px; margin-bottom: 4px; }
-  .dropzone-text { font-size: 12px; color: var(--text2); }
-  .dropzone-text strong { color: var(--text); }
-  .dropzone-status {
-    font-size: 11px;
-    color: var(--accent2);
-    margin-top: 4px;
-    font-weight: 500;
-  }
-
-  /* SIDEBAR ACTIONS */
-  .sidebar-actions {
-    padding: 12px 16px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  .btn {
-    width: 100%;
-    padding: 10px 16px;
-    border: none;
+  .photo-upload:hover { border-color: var(--primary); background: #f0eeff; }
+  .photo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-preview {
+    width: 70px; height: 70px;
     border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid var(--accent);
+    margin: 0 auto 6px;
+    display: none;
+  }
+  .photo-upload-icon { font-size: 28px; margin-bottom: 4px; }
+  .photo-upload p { font-size: 0.78rem; color: #7a7aaa; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 20px;
+    border-radius: 10px;
     font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
     font-weight: 600;
+    font-size: 0.88rem;
     cursor: pointer;
-    transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: none;
+    transition: all 0.2s;
   }
   .btn-primary {
-    background: linear-gradient(135deg, var(--accent), #3b82f6);
+    background: linear-gradient(135deg, var(--primary), #4a3580);
     color: #fff;
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 14px rgba(45,58,140,0.3);
   }
-  .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-  .btn-secondary {
-    background: var(--surface2);
-    color: var(--text);
-    border: 1px solid var(--border);
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(45,58,140,0.4); }
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent), #e8b84b);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(201,168,76,0.3);
   }
-  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-accent:hover { transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+  }
+  .btn-outline:hover { background: var(--primary); color: #fff; }
+  .btn-danger {
+    background: transparent;
+    border: 1.5px solid #e05555;
+    color: #e05555;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+  .btn-danger:hover { background: #e05555; color: #fff; }
+  .btn-edit {
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+  .btn-edit:hover { background: var(--accent); color: #fff; }
+  .btn-sm { padding: 6px 14px; font-size: 0.82rem; }
 
-  /* MAIN AREA */
-  .main {
+  /* CSV UPLOAD ZONE */
+  .csv-zone {
+    border: 2px dashed #c5bde8;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    background: linear-gradient(135deg, #faf8ff, #f0f4ff);
+    transition: all 0.2s;
+    position: relative;
+    margin-bottom: 18px;
+  }
+  .csv-zone:hover { border-color: var(--primary); background: #eeeaff; }
+  .csv-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .csv-zone h3 { font-size: 0.9rem; color: var(--primary); margin: 6px 0 3px; }
+  .csv-zone p { font-size: 0.75rem; color: #7a7aaa; }
+
+  /* DIVIDER */
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 18px 0;
+    color: #9999bb;
+    font-size: 0.78rem; font-weight: 600;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: #e0daf0;
+  }
+
+  /* SCHOOL NAME BAR */
+  .school-bar {
+    background: linear-gradient(135deg, #f0eeff, #e8f0ff);
+    border: 1.5px solid #d0c8f0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .school-bar label { margin: 0; white-space: nowrap; }
+  .school-bar input { border: none; background: transparent; padding: 4px 8px; font-size: 1rem; font-weight: 700; color: var(--primary); }
+
+  /* ACTIONS ROW */
+  .actions-row {
+    display: flex; gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  /* CONTENT AREA */
+  .content {
+    padding: 28px;
+    overflow-y: auto;
+  }
+  .content-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .content-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--primary);
+  }
+
+  /* CARD GRID */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 28px;
+  }
+
+  /* CARD WRAPPER */
+  .card-wrapper {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(200,190,220,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card-wrapper:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(44,58,140,0.18); }
+  .card-actions-bar {
+    display: flex; gap: 6px; margin-top: 12px; justify-content: flex-end;
+  }
+
+  /* ID CARD */
+  .id-card {
+    width: 100%;
+    aspect-ratio: 1.586;
+    background: var(--cream);
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .card-band { height: 14%; background: #b07fa3; }
+  .card-band.bottom { margin-top: auto; }
+  .card-body {
+    display: flex;
+    padding: 0 5% 0;
     flex: 1;
+    gap: 5%;
+    align-items: flex-start;
+    padding-top: 3%;
+  }
+  .card-left { display: flex; flex-direction: column; align-items: center; width: 35%; }
+  .card-photo {
+    width: 100%;
+    aspect-ratio: 0.85;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #d8d8e8;
+    border: 1px solid #ccc;
+  }
+  .card-barcode-wrap { margin-top: 5px; width: 100%; }
+  .card-barcode-wrap svg { width: 100%; height: auto; }
+  .card-right { flex: 1; padding-top: 2%; }
+  .card-school-name {
+    font-size: clamp(0.7rem, 2.2vw, 1.1rem);
+    font-weight: 800;
+    color: var(--dark);
+    text-align: center;
+    padding: 2% 5%;
+  }
+  .card-badge {
+    background: linear-gradient(135deg, #c9a84c, #e8c96a);
+    border-radius: 0 50px 50px 0;
+    padding: 5% 10% 5% 6%;
+    font-size: clamp(0.6rem, 1.8vw, 0.9rem);
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 6%;
+    display: inline-block;
+    letter-spacing: 0.3px;
+  }
+  .card-info-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 3%;
+    font-size: clamp(0.5rem, 1.5vw, 0.75rem);
+    line-height: 1.3;
+  }
+  .card-info-label {
+    font-weight: 700;
+    color: var(--dark);
+    min-width: 35%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card-info-sep { color: #aaa; margin: 0 4px; }
+  .card-info-val { color: #333; flex: 1; word-break: break-word; }
+
+  /* INNER CARD LAYOUT */
+  .id-card-inner {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    height: 100%;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 80px 40px;
+    color: #9999bb;
+  }
+  .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-state h2 { font-family: 'Playfair Display', serif; color: var(--primary); margin-bottom: 8px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: linear-gradient(135deg, var(--primary), #4a3580);
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    box-shadow: 0 8px 24px rgba(45,58,140,0.4);
+    z-index: 9999;
+    display: none;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   /* TABS */
-  .tab-bar {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    flex-shrink: 0;
-  }
+  .tabs { display: flex; gap: 0; margin-bottom: 18px; border-radius: 10px; overflow: hidden; border: 1.5px solid #ddd8ee; }
   .tab {
-    padding: 12px 20px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
+    flex: 1; padding: 9px; text-align: center;
+    font-size: 0.82rem; font-weight: 600;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.15s;
-    display: flex; align-items: center; gap: 6px;
-    position: relative;
-    top: 1px;
+    background: #faf8ff;
+    color: #7a7aaa;
+    border: none;
+    transition: all 0.2s;
   }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
-  .badge {
-    background: var(--accent2);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 10px;
-    line-height: 16px;
-  }
+  .tab.active { background: var(--primary); color: #fff; }
 
-  /* TAB PANELS */
-  .tab-panel { display: none; flex: 1; overflow: hidden; }
-  .tab-panel.active { display: flex; flex-direction: column; }
-
-  /* PREVIEW PANEL */
-  .preview-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    overflow-y: auto;
-    padding: 24px;
-    gap: 16px;
-    background: var(--bg);
-  }
-  .preview-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,10,40,0.5);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: none;
     align-items: center;
     justify-content: center;
-    color: var(--text2);
-    text-align: center;
-    gap: 12px;
   }
-  .preview-empty-icon { font-size: 48px; opacity: 0.4; }
-  .preview-empty h3 { font-size: 16px; color: var(--text); }
-  .preview-empty p { font-size: 13px; max-width: 280px; line-height: 1.5; }
-  #liveCanvas {
-    max-width: 760px;
-    width: 100%;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    display: none;
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    animation: popIn 0.3s ease;
   }
-  .preview-nav {
-    display: flex; align-items: center; gap: 12px;
-    display: none;
+  @keyframes popIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
-  .nav-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    padding: 6px 14px;
-    cursor: pointer;
-    font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.15s;
-  }
-  .nav-btn:hover { border-color: var(--accent); }
-  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .nav-info { font-size: 13px; color: var(--text2); min-width: 80px; text-align: center; }
+  .modal h2 { font-family: 'Playfair Display', serif; color: var(--primary); margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
 
-  /* GENERATED PANEL */
-  .generated-panel {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    background: var(--bg);
+  /* PRINT STYLES */
+  @media print {
+    header, .sidebar, .content-header, .card-actions-bar, .card-wrapper { box-shadow: none !important; }
+    .sidebar { display: none; }
+    .main { grid-template-columns: 1fr; }
+    .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    .card-wrapper { background: white; border: 1px solid #eee; }
   }
-  .generated-panel::-webkit-scrollbar { width: 6px; }
-  .generated-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  .progress-wrap {
-    margin-bottom: 16px;
+
+  /* CSV SAMPLE TABLE */
+  .sample-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; margin-top: 8px; }
+  .sample-table th { background: var(--primary); color: white; padding: 4px 8px; text-align: left; }
+  .sample-table td { padding: 3px 8px; border-bottom: 1px solid #eee; color: #555; }
+  .sample-table tr:nth-child(even) td { background: #f8f5ee; }
+
+  .progress-bar {
+    width: 100%; height: 6px;
+    background: #e8e0f0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 8px;
     display: none;
   }
-  .progress-bar-bg {
-    height: 6px;
-    background: var(--surface2);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .progress-bar-fill {
+  .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    border-radius: 3px;
-    transition: width 0.1s;
-    width: 0;
-  }
-  .progress-text { font-size: 12px; color: var(--text2); margin-top: 4px; }
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 16px;
-  }
-  .card-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .card-item img { width: 100%; display: block; }
-  .card-item-footer {
-    padding: 8px 10px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .card-item-name { font-size: 12px; color: var(--text2); font-weight: 500; }
-  .dl-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    color: var(--text);
-    font-size: 11px;
-    padding: 4px 10px;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.12s;
-    text-decoration: none;
-    display: inline-block;
-  }
-  .dl-btn:hover { border-color: var(--accent2); color: var(--accent2); }
-  .generated-empty {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: 200px; color: var(--text2); gap: 8px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 6px;
+    transition: width 0.3s;
+    width: 0%;
   }
 </style>
 </head>
 <body>
 
-<div class="app-header">
+<!-- HEADER -->
+<header>
   <div class="logo-icon">🪪</div>
-  <h1>Bulk ID Card Generator</h1>
-  <span>Canvas · SheetJS · JSZip</span>
-</div>
+  <div>
+    <h1>Bulk ID Card Generator</h1>
+    <p>Create professional student ID cards in seconds</p>
+  </div>
+  <div class="header-right">
+    <div class="stat-pill">Total Cards: <span class="stat-num" id="totalCount">0</span></div>
+    <button class="btn btn-accent btn-sm" onclick="downloadAllZip()">⬇ Download All ZIP</button>
+    <button class="btn btn-outline btn-sm" style="color:#fff;border-color:rgba(255,255,255,0.4);" onclick="window.print()">🖨 Print</button>
+  </div>
+</header>
 
-<div class="app-body">
+<div class="main">
   <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sidebar-scroll">
+  <aside class="sidebar">
 
-      <!-- Institution -->
-      <div class="section">
-        <div class="section-title">Institution Info</div>
-        <label>Institution Name</label>
-        <input type="text" id="instName" value="Your School Name Here" oninput="debouncedRender()">
-        <label>Subtitle</label>
-        <input type="text" id="instSub" value="An English Medium School" oninput="debouncedRender()">
-        <label>Card Title</label>
-        <input type="text" id="cardTitle" value="Student Identity Card" oninput="debouncedRender()">
-        <label>Title Alignment</label>
-        <div class="align-group" id="titleAlignGroup">
-          <button class="align-btn active" data-align="left" onclick="setAlign('titleAlign','left',this)">
-            <svg viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="0" y="5" width="10" height="2"/><rect x="0" y="9" width="14" height="2"/></svg>
-          </button>
-          <button class="align-btn" data-align="center" onclick="setAlign('titleAlign','center',this)">
-            <svg viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="2" y="5" width="10" height="2"/><rect x="0" y="9" width="14" height="2"/></svg>
-          </button>
-          <button class="align-btn" data-align="right" onclick="setAlign('titleAlign','right',this)">
-            <svg viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="4" y="5" width="10" height="2"/><rect x="0" y="9" width="14" height="2"/></svg>
-          </button>
-        </div>
-        <label>Info Fields Alignment</label>
-        <div class="align-group" id="infoAlignGroup">
-          <button class="align-btn active" data-align="left" onclick="setAlign('infoAlign','left',this)">
-            <svg viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="0" y="5" width="10" height="2"/><rect x="0" y="9" width="14" height="2"/></svg>
-          </button>
-          <button class="align-btn" data-align="center" onclick="setAlign('infoAlign','center',this)">
-            <svg viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="2" y="5" width="10" height="2"/><rect x="0" y="9" width="14" height="2"/></svg>
-          </button>
-          <button class="align-btn" data-align="right" onclick="setAlign('infoAlign','right',this)">
-            <svg viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2"/><rect x="4" y="5" width="10" height="2"/><rect x="0" y="9" width="14" height="2"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Colors -->
-      <div class="section">
-        <div class="section-title">Typography &amp; Colors</div>
-        <label>Label Color</label>
-        <div class="color-row">
-          <input type="color" id="labelColorPicker" value="#1e3a5f" oninput="syncColor('labelColor',this.value)">
-          <input type="text" id="labelColorHex" value="#1e3a5f" oninput="syncColorFromHex('labelColor',this.value)">
-        </div>
-        <label>Value Color</label>
-        <div class="color-row">
-          <input type="color" id="valueColorPicker" value="#374151" oninput="syncColor('valueColor',this.value)">
-          <input type="text" id="valueColorHex" value="#374151" oninput="syncColorFromHex('valueColor',this.value)">
-        </div>
-        <label>Font Size</label>
-        <div class="slider-row">
-          <input type="range" id="fontSize" min="14" max="26" value="17" oninput="state.fontSize=+this.value; document.getElementById('fontSizeVal').textContent=this.value+'px'; debouncedRender()">
-          <span class="slider-val" id="fontSizeVal">17px</span>
-        </div>
-      </div>
-
-      <!-- Header Colors -->
-      <div class="section">
-        <div class="section-title">Header &amp; Card Style</div>
-        <label>Header Left Color</label>
-        <div class="color-row">
-          <input type="color" id="hdrLeftPicker" value="#1a237e" oninput="syncColor('hdrLeft',this.value)">
-          <input type="text" id="hdrLeftHex" value="#1a237e" oninput="syncColorFromHex('hdrLeft',this.value)">
-        </div>
-        <label>Header Right Color</label>
-        <div class="color-row">
-          <input type="color" id="hdrRightPicker" value="#283593" oninput="syncColor('hdrRight',this.value)">
-          <input type="text" id="hdrRightHex" value="#283593" oninput="syncColorFromHex('hdrRight',this.value)">
-        </div>
-        <label>Accent Strip Color</label>
-        <div class="color-row">
-          <input type="color" id="accentColorPicker" value="#e53935" oninput="syncColor('accentColor',this.value)">
-          <input type="text" id="accentColorHex" value="#e53935" oninput="syncColorFromHex('accentColor',this.value)">
-        </div>
-        <label>Card Background Color</label>
-        <div class="color-row">
-          <input type="color" id="cardBgPicker" value="#ffffff" oninput="syncColor('cardBg',this.value)">
-          <input type="text" id="cardBgHex" value="#ffffff" oninput="syncColorFromHex('cardBg',this.value)">
-        </div>
-      </div>
-
-      <!-- Data Upload -->
-      <div class="section">
-        <div class="section-title">Student Data</div>
-        <div class="dropzone" id="excelDrop">
-          <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="handleExcel(this)">
-          <div class="dropzone-icon">📊</div>
-          <div class="dropzone-text"><strong>Drop Excel/CSV here</strong><br>.xlsx · .xls · .csv</div>
-          <div class="dropzone-status" id="excelStatus"></div>
-        </div>
-      </div>
-
-      <!-- Photo Upload -->
-      <div class="section">
-        <div class="section-title">Student Photos</div>
-        <div class="dropzone" id="photoDrop">
-          <input type="file" id="photoFiles" accept="image/*" multiple onchange="handlePhotos(this)">
-          <div class="dropzone-icon">🖼️</div>
-          <div class="dropzone-text"><strong>Drop student photos</strong><br>Matched by filename</div>
-          <div class="dropzone-status" id="photoStatus"></div>
-        </div>
-      </div>
-
-      <!-- Template Upload -->
-      <div class="section">
-        <div class="section-title">Custom Template (Optional)</div>
-        <div class="dropzone" id="templateDrop">
-          <input type="file" id="templateFile" accept="image/*" onchange="handleTemplate(this)">
-          <div class="dropzone-icon">🎨</div>
-          <div class="dropzone-text"><strong>Drop template image</strong><br>Overrides built-in design</div>
-          <div class="dropzone-status" id="templateStatus"></div>
-        </div>
-      </div>
-
-    </div><!-- /sidebar-scroll -->
-
-    <div class="sidebar-actions">
-      <button class="btn btn-primary" onclick="generateAll()">⚡ Generate All Cards</button>
-      <button class="btn btn-secondary" id="downloadZipBtn" onclick="downloadZIP()" disabled>📦 Download ZIP</button>
-    </div>
-  </div><!-- /sidebar -->
-
-  <!-- MAIN -->
-  <div class="main">
-    <div class="tab-bar">
-      <div class="tab active" id="tabPreview" onclick="switchTab('preview')">🖼 Live Preview</div>
-      <div class="tab" id="tabGenerated" onclick="switchTab('generated')">📋 Generated Cards <span class="badge" id="cardBadge" style="display:none">0</span></div>
+    <!-- School Name -->
+    <div class="school-bar">
+      <label>🏫</label>
+      <input type="text" id="schoolName" value="Rimberio High School" placeholder="School Name">
     </div>
 
-    <!-- PREVIEW TAB -->
-    <div class="tab-panel active" id="panelPreview">
-      <div class="preview-panel" id="previewPanel">
-        <div class="preview-empty" id="previewEmpty">
-          <div class="preview-empty-icon">🪪</div>
-          <h3>No data loaded yet</h3>
-          <p>Upload an Excel/CSV file to preview ID cards. Controls update the preview in real time.</p>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('manual', this)">✏ Manual Entry</button>
+      <button class="tab" onclick="switchTab('csv', this)">📄 CSV Upload</button>
+    </div>
+
+    <!-- MANUAL TAB -->
+    <div id="tab-manual">
+      <p class="section-title">👤 Student Details</p>
+
+      <div class="form-group">
+        <div class="photo-upload" id="photoDropZone">
+          <input type="file" id="photoInput" accept="image/*" onchange="handlePhotoChange(event)">
+          <img id="photoPreview" class="photo-preview" src="" alt="">
+          <div id="photoPlaceholder">
+            <div class="photo-upload-icon">📷</div>
+            <p>Click to upload photo</p>
+          </div>
         </div>
-        <canvas id="liveCanvas" width="856" height="540"></canvas>
-        <div class="preview-nav" id="previewNav">
-          <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
-          <div class="nav-info" id="navInfo">1 / 1</div>
-          <button class="nav-btn" id="nextBtn" onclick="navigate(1)">Next →</button>
-        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="inputName" placeholder="e.g. Chiaki Sato">
+      </div>
+      <div class="form-group">
+        <label>Student ID *</label>
+        <input type="text" id="inputID" placeholder="e.g. 123-456-7890">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="inputEmail" placeholder="e.g. hello@example.com">
+      </div>
+      <div class="form-group">
+        <label>Address</label>
+        <textarea id="inputAddress" placeholder="e.g. 123 Anywhere St., Any City"></textarea>
+      </div>
+
+      <button class="btn btn-primary" onclick="addCard()">+ Add ID Card</button>
+    </div>
+
+    <!-- CSV TAB -->
+    <div id="tab-csv" style="display:none;">
+      <div class="csv-zone">
+        <input type="file" id="csvInput" accept=".csv" onchange="handleCSV(event)">
+        <div style="font-size:36px">📄</div>
+        <h3>Upload CSV File</h3>
+        <p>Drag & drop or click to browse</p>
+      </div>
+
+      <details style="margin-bottom:14px;">
+        <summary style="font-size:0.8rem; cursor:pointer; color: var(--primary); font-weight:600;">📋 CSV Format Example</summary>
+        <table class="sample-table">
+          <thead>
+            <tr><th>Name</th><th>ID</th><th>Email</th><th>Address</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Chiaki Sato</td><td>123-456-7890</td><td>hello@ex.com</td><td>123 Main St</td></tr>
+            <tr><td>John Doe</td><td>987-654-3210</td><td>john@ex.com</td><td>456 Park Ave</td></tr>
+          </tbody>
+        </table>
+        <button class="btn btn-outline btn-sm" style="margin-top:10px; width:100%;" onclick="downloadSampleCSV()">⬇ Download Sample CSV</button>
+      </details>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
       </div>
     </div>
 
-    <!-- GENERATED TAB -->
-    <div class="tab-panel" id="panelGenerated">
-      <div class="generated-panel">
-        <div class="progress-wrap" id="progressWrap">
-          <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
-          <div class="progress-text" id="progressText">Generating...</div>
-        </div>
-        <div class="cards-grid" id="cardsGrid">
-          <div class="generated-empty">No cards generated yet. Click "Generate All Cards" to start.</div>
-        </div>
-      </div>
+    <div style="height:18px;"></div>
+    <div class="actions-row">
+      <button class="btn btn-outline btn-sm" onclick="clearAll()" style="flex:1;">🗑 Clear All</button>
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <div class="content-header">
+      <div class="content-title">Generated ID Cards</div>
     </div>
 
-  </div><!-- /main -->
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">🪪</div>
+      <h2>No Cards Yet</h2>
+      <p>Add student details manually or upload a CSV file to generate ID cards instantly.</p>
+    </div>
+
+    <div class="cards-grid" id="cardsGrid"></div>
+  </div>
 </div>
 
-<!-- HIDDEN CANVAS for generation -->
-<canvas id="genCanvas" width="856" height="540" style="display:none"></canvas>
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2>✏ Edit Student Card</h2>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="editName">
+    </div>
+    <div class="form-group">
+      <label>Student ID</label>
+      <input type="text" id="editID">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="editEmail">
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <textarea id="editAddress"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="width:auto;" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-// ─── STATE ───────────────────────────────────────────────────────────────────
-const state = {
-  students: [],
-  photos: {},      // filename -> HTMLImageElement
-  templateImg: null,
-  canvases: [],    // generated dataURLs
-  previewIdx: 0,
-  instName: 'Your School Name Here',
-  instSub: 'An English Medium School',
-  cardTitle: 'Student Identity Card',
-  titleAlign: 'left',
-  infoAlign: 'left',
-  labelColor: '#1e3a5f',
-  valueColor: '#374151',
-  fontSize: 17,
-  hdrLeft: '#1a237e',
-  hdrRight: '#283593',
-  accentColor: '#e53935',
-  cardBg: '#ffffff',
-};
+  let students = [];
+  let editIndex = null;
+  let currentPhotoDataURL = null;
 
-// ─── COLOR HELPERS ───────────────────────────────────────────────────────────
-function hexToRgb(hex) {
-  hex = hex.replace('#','');
-  if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
-  return { r: parseInt(hex.slice(0,2),16), g: parseInt(hex.slice(2,4),16), b: parseInt(hex.slice(4,6),16) };
-}
-function blendColor(hex1, hex2, t) {
-  const a = hexToRgb(hex1), b = hexToRgb(hex2);
-  const r = Math.round(a.r+(b.r-a.r)*t);
-  const g = Math.round(a.g+(b.g-a.g)*t);
-  const bl = Math.round(a.b+(b.b-a.b)*t);
-  return `rgb(${r},${g},${bl})`;
-}
-function darken(hex, amt=0.2) {
-  const {r,g,b} = hexToRgb(hex);
-  return `rgb(${Math.round(r*(1-amt))},${Math.round(g*(1-amt))},${Math.round(b*(1-amt))})`;
-}
-function lighten(hex, amt=0.3) {
-  const {r,g,b} = hexToRgb(hex);
-  return `rgb(${Math.min(255,Math.round(r+(255-r)*amt))},${Math.min(255,Math.round(g+(255-g)*amt))},${Math.min(255,Math.round(b+(255-b)*amt))})`;
-}
-
-// ─── SYNC CONTROLS ────────────────────────────────────────────────────────────
-function syncColor(key, val) {
-  state[key] = val;
-  const hexEl = document.getElementById(key+'Hex') || document.getElementById(key.replace('Color','')+'ColorHex');
-  if (hexEl) hexEl.value = val;
-  // also sync picker
-  const pickerEl = document.getElementById(key+'Picker') || document.getElementById(key.replace('Color','')+'ColorPicker');
-  if (pickerEl) pickerEl.value = val;
-  debouncedRender();
-}
-function syncColorFromHex(key, val) {
-  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-    state[key] = val;
-    const pickerEl = document.getElementById(key+'Picker') || document.getElementById(key.replace('Color','')+'ColorPicker');
-    if (pickerEl) pickerEl.value = val;
-    debouncedRender();
+  function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-manual').style.display = tab === 'manual' ? '' : 'none';
+    document.getElementById('tab-csv').style.display = tab === 'csv' ? '' : 'none';
   }
-}
-// map color picker ids to state keys
-document.querySelectorAll('input[type="color"]').forEach(el => {
-  el.addEventListener('input', () => {
-    const id = el.id; // e.g. "labelColorPicker"
-    const key = id.replace('Picker','');
-    state[key] = el.value;
-    const hexEl = document.getElementById(id.replace('Picker','Hex'));
-    if (hexEl) hexEl.value = el.value;
-    debouncedRender();
-  });
-});
-document.querySelectorAll('input[type="text"][id$="Hex"]').forEach(el => {
-  el.addEventListener('input', () => {
-    const key = el.id.replace('Hex','');
-    if (/^#[0-9a-fA-F]{6}$/.test(el.value)) {
-      state[key] = el.value;
-      const picker = document.getElementById(key+'Picker');
-      if (picker) picker.value = el.value;
-      debouncedRender();
-    }
-  });
-});
-document.querySelectorAll('#instName,#instSub,#cardTitle').forEach(el => {
-  el.addEventListener('input', () => {
-    const map = {instName:'instName', instSub:'instSub', cardTitle:'cardTitle'};
-    state[map[el.id]] = el.value;
-  });
-});
 
-function setAlign(key, val, btn) {
-  state[key] = val;
-  const grp = btn.closest('.align-group');
-  grp.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  debouncedRender();
-}
-
-// ─── DEBOUNCE ────────────────────────────────────────────────────────────────
-let debTimer;
-function debouncedRender() {
-  // sync text inputs
-  state.instName = document.getElementById('instName').value;
-  state.instSub = document.getElementById('instSub').value;
-  state.cardTitle = document.getElementById('cardTitle').value;
-  clearTimeout(debTimer);
-  debTimer = setTimeout(renderPreview, 50);
-}
-
-// ─── TABS ─────────────────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab,.tab-panel').forEach(el => el.classList.remove('active'));
-  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  document.getElementById('panel' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-}
-
-// ─── DROPZONE DRAG EVENTS ────────────────────────────────────────────────────
-document.querySelectorAll('.dropzone').forEach(dz => {
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-  dz.addEventListener('drop', e => {
-    e.preventDefault(); dz.classList.remove('drag-over');
-    const input = dz.querySelector('input[type="file"]');
-    if (input && e.dataTransfer.files.length) {
-      input.files = e.dataTransfer.files;
-      input.dispatchEvent(new Event('change'));
-    }
-  });
-});
-
-// ─── FILE HANDLERS ────────────────────────────────────────────────────────────
-function handleExcel(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, {defval:''});
-      // normalize keys
-      state.students = raw.map(row => {
-        const n = {};
-        Object.keys(row).forEach(k => n[k.toLowerCase().trim()] = String(row[k]).trim());
-        return n;
-      });
-      state.previewIdx = 0;
-      document.getElementById('excelStatus').textContent = `✓ ${state.students.length} records loaded`;
-      updatePreviewVisibility();
-      debouncedRender();
-    } catch(err) {
-      document.getElementById('excelStatus').textContent = '⚠ Error reading file';
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function handlePhotos(input) {
-  const files = Array.from(input.files); if (!files.length) return;
-  let loaded = 0;
-  state.photos = {};
-  files.forEach(f => {
-    const key = f.name.toLowerCase();
+  function handlePhotoChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        state.photos[key] = img;
-        loaded++;
-        if (loaded === files.length) {
-          document.getElementById('photoStatus').textContent = `✓ ${loaded} photos loaded`;
-          debouncedRender();
-        }
-      };
-      img.src = ev.target.result;
+    reader.onload = (ev) => {
+      currentPhotoDataURL = ev.target.result;
+      const preview = document.getElementById('photoPreview');
+      preview.src = currentPhotoDataURL;
+      preview.style.display = 'block';
+      document.getElementById('photoPlaceholder').style.display = 'none';
     };
-    reader.readAsDataURL(f);
-  });
-  document.getElementById('photoStatus').textContent = `Loading ${files.length} photos...`;
-}
-
-function handleTemplate(input) {
-  const file = input.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => { state.templateImg = img; document.getElementById('templateStatus').textContent = '✓ Template loaded'; debouncedRender(); };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-// ─── PREVIEW VISIBILITY ───────────────────────────────────────────────────────
-function updatePreviewVisibility() {
-  const hasData = state.students.length > 0;
-  document.getElementById('previewEmpty').style.display = hasData ? 'none' : 'flex';
-  document.getElementById('liveCanvas').style.display = hasData ? 'block' : 'none';
-  document.getElementById('previewNav').style.display = hasData ? 'flex' : 'none';
-}
-
-// ─── NAVIGATE ─────────────────────────────────────────────────────────────────
-function navigate(dir) {
-  state.previewIdx = Math.max(0, Math.min(state.students.length-1, state.previewIdx+dir));
-  renderPreview();
-}
-function updateNavUI() {
-  const n = state.students.length;
-  document.getElementById('navInfo').textContent = n ? `${state.previewIdx+1} / ${n}` : '0 / 0';
-  document.getElementById('prevBtn').disabled = state.previewIdx <= 0;
-  document.getElementById('nextBtn').disabled = state.previewIdx >= n-1;
-}
-
-// ─── GET STUDENT FIELDS ───────────────────────────────────────────────────────
-function getField(student, ...keys) {
-  for (const k of keys) {
-    const v = student[k]; if (v && v !== '0') return v;
-  }
-  return '';
-}
-function getStudentData(student) {
-  return {
-    name: getField(student, 'name','student name','full name','student'),
-    id: getField(student, 'id','student id','roll no','roll','roll number','enrollment','reg no','registration'),
-    cls: getField(student, 'class','department','grade','section','stream'),
-    dob: getField(student, 'dob','date of birth','birthdate','birth date','d.o.b'),
-    phone: getField(student, 'phone','mobile','contact','tel','telephone','mob'),
-    address: getField(student, 'address','addr','location'),
-    photoKey: getField(student, 'photo','image','filename','photo filename','img'),
-  };
-}
-
-// ─── PHOTO LOOKUP ──────────────────────────────────────────────────────────────
-function getPhoto(photoKey) {
-  if (!photoKey) return null;
-  const k = photoKey.toLowerCase();
-  return state.photos[k] || state.photos[k+'.jpg'] || state.photos[k+'.jpeg'] || state.photos[k+'.png'] || null;
-}
-
-// ─── DRAW ID CARD ──────────────────────────────────────────────────────────────
-function drawCard(canvas, student) {
-  const ctx = canvas.getContext('2d');
-  const W = 856, H = 540;
-  ctx.clearRect(0, 0, W, H);
-
-  // If custom template
-  if (state.templateImg) {
-    ctx.drawImage(state.templateImg, 0, 0, W, H);
-    if (student) drawInfoOnTemplate(ctx, student, W, H);
-    return;
+    reader.readAsDataURL(file);
   }
 
-  // ── Card background ──
-  ctx.fillStyle = state.cardBg;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, W, H, 12);
-  ctx.fill();
-
-  const HDR_H = Math.round(H * 0.43); // 232px
-
-  // ── Header gradient ──
-  const grd = ctx.createLinearGradient(0, 0, W, HDR_H);
-  grd.addColorStop(0, state.hdrLeft);
-  grd.addColorStop(0.6, blendColor(state.hdrLeft, state.hdrRight, 0.6));
-  grd.addColorStop(1, state.hdrRight);
-  ctx.fillStyle = grd;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, W, HDR_H, [12, 12, 0, 0]);
-  ctx.fill();
-
-  // ── Geometric triangle overlays ──
-  function drawTri(x1,y1,x2,y2,x3,y3,alpha) {
-    ctx.beginPath();
-    ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3);
-    ctx.closePath();
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.fill();
-  }
-  drawTri(W*0.4, 0, W*0.7, 0, W*0.55, HDR_H, 0.04);
-  drawTri(W*0.6, 0, W, 0, W, HDR_H*0.6, 0.05);
-  drawTri(0, 0, W*0.25, 0, 0, HDR_H, 0.04);
-  drawTri(W*0.75, 0, W, 0, W, HDR_H*0.3, 0.03);
-
-  // ── Bottom-left accent strip (diagonal) ──
-  const stripColor = state.accentColor;
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(0, HDR_H+10);
-  ctx.lineTo(0, H);
-  ctx.lineTo(W*0.28, H);
-  ctx.lineTo(W*0.34, HDR_H+10);
-  ctx.closePath();
-  ctx.fillStyle = stripColor;
-  ctx.fill();
-  // darker stripe
-  ctx.beginPath();
-  ctx.moveTo(0, HDR_H+10);
-  ctx.lineTo(0, HDR_H+36);
-  ctx.lineTo(W*0.34, HDR_H+36);
-  ctx.lineTo(W*0.34, HDR_H+10);
-  ctx.closePath();
-  ctx.fillStyle = darken(stripColor, 0.25);
-  ctx.fill();
-  ctx.restore();
-
-  // ── Right accent strip ──
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(W*0.66, HDR_H+10);
-  ctx.lineTo(W*0.72, HDR_H+10);
-  ctx.lineTo(W, HDR_H+10);
-  ctx.lineTo(W, H);
-  ctx.lineTo(W*0.72, H);
-  ctx.closePath();
-  ctx.fillStyle = stripColor;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(W*0.66, HDR_H+10);
-  ctx.lineTo(W, HDR_H+10);
-  ctx.lineTo(W, HDR_H+36);
-  ctx.lineTo(W*0.66, HDR_H+36);
-  ctx.closePath();
-  ctx.fillStyle = darken(stripColor, 0.25);
-  ctx.fill();
-  ctx.restore();
-
-  // ── "IDENTITY CARD" labels on strips ──
-  ctx.save();
-  ctx.font = 'bold 11px "DM Sans", sans-serif';
-  ctx.letterSpacing = '1.5px';
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('IDENTITY CARD', 10, HDR_H+27);
-  ctx.textAlign = 'right';
-  ctx.fillText('IDENTITY CARD', W-10, HDR_H+27);
-  ctx.restore();
-
-  // ── Logo block (top-right) ──
-  const logoR = 28;
-  const logoX = W - logoR - 16;
-  const logoY = 14 + logoR;
-  // white circle
-  ctx.beginPath();
-  ctx.arc(logoX, logoY, logoR, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  // mortarboard emoji
-  ctx.font = '22px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🎓', logoX, logoY);
-  // institution name
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = '#ffffff';
-  const instNameText = state.instName || 'Institution Name';
-  const instSubText = state.instSub || '';
-  // measure to right-align block
-  ctx.font = 'bold 15px "DM Sans", sans-serif';
-  ctx.fillText(instNameText, logoX - logoR - 8, 14);
-  ctx.font = '11px "DM Sans", sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText(instSubText, logoX - logoR - 8, 33);
-
-  // ── Card Title ──
-  const titleArea = { x: W*0.38, w: W*0.55, cx: W*0.38 + (W*0.55)/2 };
-  const titleText = state.cardTitle || 'Student Identity Card';
-  ctx.font = 'bold 20px "Playfair Display", serif';
-  ctx.fillStyle = '#ffffff';
-  ctx.textBaseline = 'bottom';
-  let titleX;
-  if (state.titleAlign === 'center') { ctx.textAlign = 'center'; titleX = titleArea.cx; }
-  else if (state.titleAlign === 'right') { ctx.textAlign = 'right'; titleX = titleArea.x + titleArea.w - 10; }
-  else { ctx.textAlign = 'left'; titleX = titleArea.x + 10; }
-  ctx.fillText(titleText, titleX, HDR_H - 10);
-
-  // ── Photo area (left side) ──
-  const photoData = student ? getStudentData(student) : null;
-  const photoImg = photoData ? getPhoto(photoData.photoKey) : null;
-  const photoR = 72;
-  const photoX = W*0.16;
-  const photoY = HDR_H * 0.5;
-  // white ring
-  ctx.beginPath();
-  ctx.arc(photoX, photoY, photoR+4, 0, Math.PI*2);
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.fill();
-  // clip photo
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(photoX, photoY, photoR, 0, Math.PI*2);
-  ctx.clip();
-  if (photoImg) {
-    const s = Math.min(photoImg.width, photoImg.height);
-    const sx = (photoImg.width-s)/2, sy = (photoImg.height-s)/2;
-    ctx.drawImage(photoImg, sx, sy, s, s, photoX-photoR, photoY-photoR, photoR*2, photoR*2);
-  } else {
-    ctx.fillStyle = '#e0e7ef';
-    ctx.fillRect(photoX-photoR, photoY-photoR, photoR*2, photoR*2);
-    ctx.font = '56px serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('👤', photoX, photoY);
-  }
-  ctx.restore();
-
-  // ── Barcode (decorative, seeded) ──
-  const bcY = HDR_H + 50;
-  const bcX = photoX - 62;
-  const bcW = 124;
-  const bcH = 38;
-  const seed = photoData ? (photoData.id || photoData.name || 'seed') : 'seed';
-  ctx.save();
-  ctx.fillStyle = '#222';
-  let bx = bcX;
-  let seedVal = [...seed].reduce((a,c)=>a+c.charCodeAt(0),0);
-  const bars = 42;
-  for (let i=0; i<bars; i++) {
-    seedVal = (seedVal * 1664525 + 1013904223) & 0xffffffff;
-    const bw = (Math.abs(seedVal)%3)+1;
-    if (i%2===0) { ctx.fillRect(bx, bcY, bw, bcH); }
-    bx += bw + 1;
-    if (bx > bcX+bcW) break;
-  }
-  ctx.fillStyle = '#333';
-  ctx.font = '8px monospace';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText(photoData?.id || '0000000000', photoX, bcY+bcH+2);
-  ctx.restore();
-
-  // ── Info fields (right side) ──
-  if (!photoData) return;
-  const fields = [
-    { label: 'Name', value: photoData.name },
-    { label: 'Student ID', value: photoData.id },
-    { label: 'Class', value: photoData.cls },
-    { label: 'D.O.B', value: photoData.dob },
-    { label: 'Mobile', value: photoData.phone },
-    { label: 'Address', value: photoData.address },
-  ].filter(f => f.value);
-
-  const infoX = W*0.35;
-  const infoW = W - infoX - 20;
-  const infoTop = HDR_H + 45;
-  const infoBottom = H - 20;
-  const infoH = infoBottom - infoTop;
-  const lineH = Math.min(32, infoH / Math.max(fields.length,1));
-  const fs = state.fontSize;
-
-  // Name is large + bold at top
-  if (photoData.name) {
-    ctx.font = `bold ${fs+4}px "DM Sans", sans-serif`;
-    ctx.fillStyle = state.labelColor;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(photoData.name.toUpperCase(), infoX, infoTop - 30 > HDR_H ? infoTop - 30 : infoTop);
+  function addCard() {
+    const name = document.getElementById('inputName').value.trim();
+    const id = document.getElementById('inputID').value.trim();
+    const email = document.getElementById('inputEmail').value.trim();
+    const address = document.getElementById('inputAddress').value.trim();
+    if (!name || !id) { showToast('⚠ Name and ID are required!'); return; }
+    students.push({ name, id, email, address, photo: currentPhotoDataURL });
+    renderCards();
+    clearForm();
+    showToast('✅ Card added successfully!');
   }
 
-  const dataFields = fields.filter(f=>f.label!=='Name');
-  const startY = photoData.name ? infoTop + lineH*0.2 : infoTop;
+  function clearForm() {
+    document.getElementById('inputName').value = '';
+    document.getElementById('inputID').value = '';
+    document.getElementById('inputEmail').value = '';
+    document.getElementById('inputAddress').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoPlaceholder').style.display = '';
+    document.getElementById('photoInput').value = '';
+    currentPhotoDataURL = null;
+  }
 
-  dataFields.forEach((f, i) => {
-    const y = startY + i*lineH;
-    ctx.textBaseline = 'middle';
-    const midY = y + lineH*0.5;
+  function handleCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const lines = ev.target.result.split('\n').filter(l => l.trim());
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z]/g,''));
+      const bar = document.getElementById('progressBar');
+      const fill = document.getElementById('progressFill');
+      bar.style.display = 'block';
+      let added = 0;
+      const total = lines.length - 1;
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVLine(lines[i]);
+        if (cols.length < 2) continue;
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = (cols[idx] || '').trim(); });
+        students.push({
+          name: obj.name || obj['fullname'] || '',
+          id: obj.id || obj['studentid'] || obj['studentno'] || '',
+          email: obj.email || '',
+          address: obj.address || '',
+          photo: null
+        });
+        added++;
+        fill.style.width = ((i / total) * 100) + '%';
+      }
+      setTimeout(() => { bar.style.display = 'none'; fill.style.width = '0%'; }, 800);
+      renderCards();
+      showToast(`✅ ${added} cards imported from CSV!`);
+    };
+    reader.readAsText(file);
+  }
 
-    if (state.infoAlign === 'left') {
-      // Label - value layout
-      const labelW = 80;
-      ctx.font = `600 ${fs-2}px "DM Sans", sans-serif`;
-      ctx.fillStyle = state.labelColor;
-      ctx.textAlign = 'left';
-      ctx.fillText(f.label, infoX, midY);
-      ctx.font = `${fs-2}px "DM Sans", sans-serif`;
-      ctx.fillStyle = '#888';
-      ctx.fillText('-', infoX + labelW - 8, midY);
-      ctx.fillStyle = state.valueColor;
-      ctx.fillText(f.value, infoX + labelW + 4, midY);
-    } else {
-      const str = `${f.label}: ${f.value}`;
-      ctx.font = `${fs-2}px "DM Sans", sans-serif`;
-      ctx.textAlign = state.infoAlign;
-      const ax = state.infoAlign === 'center' ? infoX + infoW/2 : infoX + infoW;
-      ctx.fillStyle = state.valueColor;
-      ctx.fillText(str, ax, midY);
+  function parseCSVLine(line) {
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === '"') { inQ = !inQ; continue; }
+      if (c === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+      cur += c;
     }
+    result.push(cur);
+    return result;
+  }
 
-    // thin separator line
-    if (i < dataFields.length-1) {
-      ctx.save();
-      ctx.strokeStyle = '#e0e0e0';
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(infoX, y+lineH);
-      ctx.lineTo(infoX+infoW, y+lineH);
-      ctx.stroke();
-      ctx.restore();
+  function renderCards() {
+    const grid = document.getElementById('cardsGrid');
+    const empty = document.getElementById('emptyState');
+    document.getElementById('totalCount').textContent = students.length;
+    if (students.length === 0) {
+      empty.style.display = '';
+      grid.innerHTML = '';
+      return;
     }
+    empty.style.display = 'none';
+    grid.innerHTML = '';
+    students.forEach((s, i) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card-wrapper';
+      wrapper.innerHTML = `
+        <div class="id-card" id="card-${i}">
+          <div class="id-card-inner">
+            <div class="card-band"></div>
+            <div style="text-align:center;">
+              <div class="card-school-name">${escHtml(document.getElementById('schoolName').value || 'School Name')}</div>
+            </div>
+            <div class="card-body">
+              <div class="card-left">
+                ${s.photo ? `<img class="card-photo" src="${s.photo}" alt="Photo">` : `<div class="card-photo" style="display:flex;align-items:center;justify-content:center;font-size:36px;">👤</div>`}
+                <div class="card-barcode-wrap">
+                  <svg class="barcode-svg-${i}"></svg>
+                </div>
+              </div>
+              <div class="card-right">
+                <div class="card-badge">Student ID Card</div>
+                <div class="card-info-row">
+                  <span class="card-info-label">Name</span>
+                  <span class="card-info-sep">:</span>
+                  <span class="card-info-val">${escHtml(s.name)}</span>
+                </div>
+                <div class="card-info-row">
+                  <span class="card-info-label">ID</span>
+                  <span class="card-info-sep">:</span>
+                  <span class="card-info-val">${escHtml(s.id)}</span>
+                </div>
+                ${s.email ? `<div class="card-info-row">
+                  <span class="card-info-label">Email</span>
+                  <span class="card-info-sep">:</span>
+                  <span class="card-info-val">${escHtml(s.email)}</span>
+                </div>` : ''}
+                ${s.address ? `<div class="card-info-row">
+                  <span class="card-info-label">Address</span>
+                  <span class="card-info-sep">:</span>
+                  <span class="card-info-val">${escHtml(s.address)}</span>
+                </div>` : ''}
+              </div>
+            </div>
+            <div class="card-band bottom"></div>
+          </div>
+        </div>
+        <div class="card-actions-bar">
+          <button class="btn btn-edit" onclick="openEdit(${i})">✏ Edit</button>
+          <button class="btn btn-accent btn-sm" onclick="downloadCard(${i})">⬇ PNG</button>
+          <button class="btn btn-danger" onclick="deleteCard(${i})">🗑 Delete</button>
+        </div>
+      `;
+      grid.appendChild(wrapper);
+      // Render barcode
+      try {
+        JsBarcode(`.barcode-svg-${i}`, s.id.replace(/[^0-9A-Za-z\-\.\ \$\/\+\%]/g, ''), {
+          format: "CODE128",
+          width: 1.2,
+          height: 28,
+          displayValue: false,
+          margin: 2
+        });
+      } catch(err) { /* skip invalid barcode */ }
+    });
+  }
+
+  function escHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function deleteCard(i) {
+    students.splice(i, 1);
+    renderCards();
+    showToast('🗑 Card deleted');
+  }
+
+  function openEdit(i) {
+    editIndex = i;
+    const s = students[i];
+    document.getElementById('editName').value = s.name;
+    document.getElementById('editID').value = s.id;
+    document.getElementById('editEmail').value = s.email;
+    document.getElementById('editAddress').value = s.address;
+    document.getElementById('editModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('editModal').classList.remove('show');
+    editIndex = null;
+  }
+
+  function saveEdit() {
+    if (editIndex === null) return;
+    students[editIndex].name = document.getElementById('editName').value.trim();
+    students[editIndex].id = document.getElementById('editID').value.trim();
+    students[editIndex].email = document.getElementById('editEmail').value.trim();
+    students[editIndex].address = document.getElementById('editAddress').value.trim();
+    renderCards();
+    closeModal();
+    showToast('✅ Card updated!');
+  }
+
+  async function downloadCard(i) {
+    const el = document.getElementById(`card-${i}`);
+    showToast('⏳ Generating PNG...');
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: null });
+    const link = document.createElement('a');
+    link.download = `id-card-${students[i].name.replace(/\s+/g,'-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ Downloaded!');
+  }
+
+  async function downloadAllZip() {
+    if (students.length === 0) { showToast('⚠ No cards to download!'); return; }
+    showToast('⏳ Preparing ZIP...');
+    const zip = new JSZip();
+    const folder = zip.folder('ID-Cards');
+    for (let i = 0; i < students.length; i++) {
+      const el = document.getElementById(`card-${i}`);
+      if (!el) continue;
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: null });
+      const dataURL = canvas.toDataURL('image/png');
+      const base64 = dataURL.split(',')[1];
+      folder.file(`id-card-${students[i].name.replace(/\s+/g,'-') || i}.png`, base64, { base64: true });
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'ID-Cards-Bulk.zip';
+    link.click();
+    showToast('✅ ZIP Downloaded!');
+  }
+
+  function clearAll() {
+    if (students.length === 0) return;
+    if (!confirm('Clear all cards?')) return;
+    students = [];
+    renderCards();
+    showToast('🗑 All cards cleared');
+  }
+
+  function downloadSampleCSV() {
+    const content = `Name,ID,Email,Address\nChiaki Sato,123-456-7890,hello@example.com,"123 Anywhere St., Any City"\nJohn Doe,987-654-3210,john@example.com,"456 Park Ave, New York"`;
+    const blob = new Blob([content], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'sample-students.csv';
+    link.click();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(t._timeout);
+    t._timeout = setTimeout(() => { t.style.display = 'none'; }, 2500);
+  }
+
+  // School name live update
+  document.getElementById('schoolName').addEventListener('input', () => {
+    if (students.length > 0) renderCards();
   });
 
-  // ── Phone strip at bottom ──
-  if (photoData.phone) {
-    ctx.save();
-    ctx.fillStyle = stripColor;
-    ctx.beginPath();
-    ctx.roundRect(infoX, H-28, infoW, 22, 4);
-    ctx.fill();
-    ctx.font = 'bold 12px "DM Sans", sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`📞 ${photoData.phone}`, infoX + infoW/2, H-17);
-    ctx.restore();
-  }
-}
-
-function drawInfoOnTemplate(ctx, student, W, H) {
-  const d = getStudentData(student);
-  ctx.font = `bold 22px "DM Sans", sans-serif`;
-  ctx.fillStyle = state.labelColor;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillText(d.name || '', 20, 20);
-}
-
-// ─── RENDER PREVIEW ───────────────────────────────────────────────────────────
-function renderPreview() {
-  const canvas = document.getElementById('liveCanvas');
-  if (!state.students.length && !state.templateImg) {
-    // Draw empty preview with current settings
-    updatePreviewVisibility();
-    updateNavUI();
-    return;
-  }
-  if (!state.students.length) {
-    canvas.style.display = 'block';
-    document.getElementById('previewEmpty').style.display = 'none';
-  }
-  const student = state.students[state.previewIdx] || null;
-  drawCard(canvas, student);
-  updateNavUI();
-}
-
-// ─── GENERATE ALL ─────────────────────────────────────────────────────────────
-async function generateAll() {
-  if (!state.students.length) { alert('Please upload student data first.'); return; }
-  switchTab('generated');
-  const grid = document.getElementById('cardsGrid');
-  grid.innerHTML = '';
-  state.canvases = [];
-
-  const prog = document.getElementById('progressWrap');
-  const fill = document.getElementById('progressFill');
-  const txt = document.getElementById('progressText');
-  prog.style.display = 'block';
-  fill.style.width = '0%';
-
-  const canvas = document.getElementById('genCanvas');
-  const total = state.students.length;
-
-  for (let i=0; i<total; i++) {
-    drawCard(canvas, state.students[i]);
-    const url = canvas.toDataURL('image/png');
-    state.canvases.push(url);
-    const d = getStudentData(state.students[i]);
-    const name = d.name || `Student ${i+1}`;
-
-    const item = document.createElement('div');
-    item.className = 'card-item';
-    item.innerHTML = `
-      <img src="${url}" alt="${name}">
-      <div class="card-item-footer">
-        <span class="card-item-name">${name}</span>
-        <a class="dl-btn" href="${url}" download="id_${i+1}_${name.replace(/\s+/g,'_')}.png">↓ PNG</a>
-      </div>`;
-    grid.appendChild(item);
-
-    const pct = Math.round((i+1)/total*100);
-    fill.style.width = pct+'%';
-    txt.textContent = `Generating ${i+1} of ${total}...`;
-    // yield to browser
-    if (i%5===0) await new Promise(r=>setTimeout(r,0));
-  }
-
-  txt.textContent = `✓ ${total} cards generated`;
-  setTimeout(()=>prog.style.display='none', 2000);
-
-  const badge = document.getElementById('cardBadge');
-  badge.textContent = total;
-  badge.style.display = 'inline-block';
-  document.getElementById('downloadZipBtn').disabled = false;
-}
-
-// ─── DOWNLOAD ZIP ─────────────────────────────────────────────────────────────
-async function downloadZIP() {
-  if (!state.canvases.length) return;
-  const zip = new JSZip();
-  const folder = zip.folder('id_cards');
-  state.canvases.forEach((url, i) => {
-    const d = getStudentData(state.students[i]);
-    const name = (d.name || `student_${i+1}`).replace(/\s+/g,'_');
-    const data = url.split(',')[1];
-    folder.file(`${i+1}_${name}.png`, data, {base64:true});
+  // Close modal on overlay click
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
   });
-  const blob = await zip.generateAsync({type:'blob'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'id_cards.zip';
-  a.click();
-}
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-updatePreviewVisibility();
-updateNavUI();
-debouncedRender();
+  // Load sample data
+  window.addEventListener('load', () => {
+    students = [
+      { name: 'Chiaki Sato', id: '123-456-7890', email: 'hello@reallygreatsite.com', address: '123 Anywhere St., Any City', photo: null }
+    ];
+    renderCards();
+  });
 </script>
 </body>
 </html>
