@@ -1,1523 +1,1331 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>JoyBOT</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-family: 'Inter', sans-serif; }
-body { overscroll-behavior: none; }
-:root {
-  --bg-primary: #ffffff; --bg-secondary: #f0f4f9; --bg-sidebar: #f0f4f9;
-  --text-primary: #1f1f1f; --text-secondary: #5f6368; --text-tertiary: #80868b;
-  --border-color: #e0e0e0; --accent: #1a73e8; --accent-hover: #1557b0;
-  --user-bubble: #d3e3fd; --ai-bubble: #f0f4f9; --input-bg: #f0f4f9;
-  --hover-bg: #e8eaed; --code-bg: #282c34; --code-text: #abb2bf;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1); --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
-  --danger: #ea4335; --success: #34a853; --mem-core: #e8f5e9; --mem-recent: #e3f2fd; --mem-archive: #f3e5f5;
-}
-.dark {
-  --bg-primary: #131314; --bg-secondary: #1e1f20; --bg-sidebar: #171718;
-  --text-primary: #e3e3e3; --text-secondary: #9aa0a6; --text-tertiary: #6e7479;
-  --border-color: #3c4043; --accent: #8ab4f8; --accent-hover: #aecbfa;
-  --user-bubble: #004a77; --ai-bubble: #1e1f20; --input-bg: #282a2c;
-  --hover-bg: #28292a; --code-bg: #1a1a2e; --code-text: #c5c8c6;
-  --shadow: 0 1px 3px rgba(0,0,0,0.4); --shadow-lg: 0 4px 16px rgba(0,0,0,0.5);
-  --mem-core: #1b3a2a; --mem-recent: #0d2137; --mem-archive: #2a1b3a;
-}
-body { background: var(--bg-primary); color: var(--text-primary); }
-#loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); z-index: 9999; font-size: 1.25rem; color: var(--text-secondary); }
-#loading .spinner { width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 12px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.cursor-blink::after { content: '▋'; animation: blink 1s infinite; color: var(--accent); margin-left: 1px; }
-.listening-pulse { animation: pulse 1.5s infinite; color: var(--danger) !important; }
-.sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-.sidebar-overlay.active { opacity: 1; pointer-events: auto; }
-.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 280px; background: var(--bg-sidebar); border-right: 1px solid var(--border-color); z-index: 50; transform: translateX(-100%); transition: transform 0.3s ease; display: flex; flex-direction: column; overflow: hidden; }
-.sidebar.open { transform: translateX(0); }
-@media (min-width: 768px) {
-  .sidebar { position: relative; transform: translateX(0); flex-shrink: 0; }
-  .sidebar.collapsed { transform: translateX(-100%); position: fixed; }
-  .sidebar-overlay { display: none; }
-}
-.msg-content pre { background: var(--code-bg); color: var(--code-text); padding: 14px; border-radius: 10px; overflow-x: auto; margin: 8px 0; font-size: 13px; line-height: 1.5; position: relative; }
-.msg-content pre code { background: none; padding: 0; font-size: inherit; }
-.msg-content code { background: var(--hover-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.875em; }
-.msg-content p { margin: 4px 0; line-height: 1.7; }
-.msg-content ul, .msg-content ol { padding-left: 20px; margin: 6px 0; }
-.msg-content li { margin: 3px 0; line-height: 1.6; }
-.msg-content h1, .msg-content h2, .msg-content h3 { margin: 12px 0 6px; font-weight: 600; }
-.msg-content a { color: var(--accent); text-decoration: underline; }
-.msg-content blockquote { border-left: 3px solid var(--accent); padding-left: 12px; margin: 8px 0; color: var(--text-secondary); font-style: italic; }
-.msg-content table { border-collapse: collapse; margin: 8px 0; width: 100%; }
-.msg-content th, .msg-content td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
-.msg-content th { background: var(--hover-bg); font-weight: 600; }
-.copy-btn { position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.15); border: none; color: #ccc; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 12px; opacity: 0; transition: opacity 0.2s; }
-.msg-content pre:hover .copy-btn { opacity: 1; }
-.copy-btn:hover { background: rgba(255,255,255,0.25); }
-.msg-actions { display: flex; gap: 4px; margin-top: 6px; opacity: 0; transition: opacity 0.2s; }
-.msg-wrapper:hover .msg-actions { opacity: 1; }
-.msg-action-btn { background: none; border: 1px solid var(--border-color); cursor: pointer; padding: 3px 8px; border-radius: 6px; font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 3px; transition: all 0.15s; font-family: 'Inter', sans-serif; }
-.msg-action-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
-.msg-action-btn.danger:hover { background: #fce8e6; color: var(--danger); border-color: var(--danger); }
-.dark .msg-action-btn.danger:hover { background: #3a1c1c; }
-#selectionCopyBtn { position: fixed; display: none; z-index: 9000; background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; box-shadow: var(--shadow-lg); white-space: nowrap; }
-#selectionCopyBtn:hover { background: var(--accent-hover); }
-.thumb-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid var(--border-color); }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.modal-box { background: var(--bg-primary); border-radius: 16px; padding: 24px; max-width: 500px; width: 100%; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-color); }
-.chat-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; position: relative; color: var(--text-primary); font-size: 14px; }
-.chat-item:hover { background: var(--hover-bg); }
-.chat-item.active { background: var(--hover-bg); font-weight: 500; }
-.chat-item .actions { position: absolute; right: 8px; display: none; gap: 2px; align-items: center; }
-.chat-item:hover .actions { display: flex; }
-textarea#chatInput { resize: none; background: transparent; border: none; outline: none; color: var(--text-primary); font-family: 'Inter', sans-serif; font-size: 15px; width: 100%; max-height: 120px; line-height: 1.5; padding: 0; text-align: center; vertical-align: middle; }
-textarea#chatInput::placeholder { color: var(--text-tertiary); text-align: center; }
-.icon-btn { background: none; border: none; cursor: pointer; padding: 8px; border-radius: 50%; color: var(--text-secondary); transition: all 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.icon-btn:hover { background: var(--hover-bg); color: var(--text-primary); }
-.icon-btn:disabled { opacity: 0.4; cursor: default; }
-.icon-btn:disabled:hover { background: none; }
-.welcome-card { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; cursor: pointer; transition: all 0.2s; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
-.welcome-card:hover { border-color: var(--accent); background: var(--hover-bg); }
-.img-in-chat { max-width: 280px; border-radius: 12px; margin-top: 6px; cursor: pointer; }
-.gen-img-chat { max-width: 350px; border-radius: 12px; margin-top: 8px; }
-input[type="text"], input[type="password"], select { background: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; width: 100%; font-size: 14px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; }
-input:focus, select:focus { border-color: var(--accent); }
-.btn-primary { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: 500; transition: background 0.2s; font-family: 'Inter', sans-serif; }
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-secondary { background: var(--hover-bg); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-weight: 500; transition: all 0.2s; font-family: 'Inter', sans-serif; }
-.btn-secondary:hover { background: var(--border-color); }
-.btn-danger { background: var(--danger); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; cursor: pointer; font-weight: 500; transition: background 0.2s; font-family: 'Inter', sans-serif; }
-.btn-danger:hover { background: #c5221f; }
-.status-msg { padding: 6px 10px; border-radius: 6px; font-size: 13px; margin-top: 8px; }
-.status-success { background: #e6f4ea; color: #137333; }
-.status-error { background: #fce8e6; color: #c5221f; }
-.dark .status-success { background: #1b3a2a; color: #81c995; }
-.dark .status-error { background: #3a1c1c; color: #f28b82; }
-.edit-textarea { width: 100%; background: var(--bg-primary); border: 1px solid var(--accent); border-radius: 8px; padding: 8px 12px; font-size: 15px; font-family: 'Inter', sans-serif; color: var(--text-primary); resize: none; outline: none; margin-top: 6px; }
-
-/* ===== Memory System UI ===== */
-.mem-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 10px; }
-.mem-badge.core { background: #e8f5e9; color: #2e7d32; }
-.mem-badge.recent { background: #e3f2fd; color: #1565c0; }
-.mem-badge.archive { background: #f3e5f5; color: #6a1b9a; }
-.dark .mem-badge.core { background: #1b3a2a; color: #81c995; }
-.dark .mem-badge.recent { background: #0d2137; color: #8ab4f8; }
-.dark .mem-badge.archive { background: #2a1b3a; color: #ce93d8; }
-.mem-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 12px; line-height: 1.5; position: relative; }
-.mem-card.core { border-left: 3px solid #34a853; }
-.mem-card.recent { border-left: 3px solid #1a73e8; }
-.mem-card.archive { border-left: 3px solid #9c27b0; }
-.mem-indicator { position: fixed; bottom: 80px; right: 12px; background: var(--accent); color: #fff; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 600; z-index: 50; cursor: pointer; box-shadow: var(--shadow-lg); display: none; }
-.mem-injection-bar { background: linear-gradient(135deg, #e3f2fd, #f3e5f5); border: 1px solid #90caf9; border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #1565c0; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.dark .mem-injection-bar { background: linear-gradient(135deg, #0d2137, #1a0a2a); border-color: #3c4043; color: #8ab4f8; }
-.storage-bar { height: 6px; border-radius: 3px; background: var(--border-color); overflow: hidden; margin: 4px 0; }
-.storage-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s; background: var(--accent); }
-.storage-bar-fill.warn { background: #fbbc04; }
-.storage-bar-fill.danger { background: var(--danger); }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GrokBOT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof tailwind !== 'undefined') tailwind.config = { darkMode: 'class' };
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .prose pre {
+            background-color: #1e293b; color: #e2e8f0; padding: 1rem;
+            border-radius: 0.5rem; overflow-x: auto; border: 1px solid #334155;
+            margin-top: 0.5rem; margin-bottom: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); position: relative;
+        }
+        .prose code {
+            background-color: rgba(0,0,0,0.1); padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem; font-size: 0.875em;
+            font-family: 'Courier New', Courier, monospace; font-weight: 600;
+        }
+        .dark .prose code { background-color: rgba(255,255,255,0.15); color: #e2e8f0; }
+        .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .prose strong { color: #2563eb; font-weight: 700; }
+        .dark .prose strong { color: #60a5fa; }
+        .code-copy-btn {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #94a3b8; padding: 0.2rem 0.5rem; border-radius: 0.25rem;
+            font-size: 0.75rem; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 0.25rem;
+        }
+        .code-copy-btn:hover { background: rgba(255,255,255,0.2); color: white; }
+        body, html { height: 100%; overflow: hidden; }
+        .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .msg-actions { opacity: 0; transition: opacity 0.2s; display: flex; gap: 8px; align-items: center; }
+        .group:hover .msg-actions { opacity: 1; }
+        @media (max-width: 768px) { .msg-actions { opacity: 1; } }
+        .action-btn {
+            padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;
+            cursor: pointer; display: flex; align-items: center; gap: 4px;
+            background-color: rgba(0,0,0,0.05);
+        }
+        .dark .action-btn { background-color: rgba(255,255,255,0.05); }
+        .action-btn:hover { background-color: rgba(0,0,0,0.1); }
+        .dark .action-btn:hover { background-color: rgba(255,255,255,0.15); }
+        /* Tier badges */
+        .tier-core   { background: linear-gradient(135deg,#f59e0b,#ef4444); }
+        .tier-recent { background: linear-gradient(135deg,#3b82f6,#8b5cf6); }
+        .tier-archive{ background: linear-gradient(135deg,#6b7280,#374151); }
+        .memory-badge {
+            font-size: 0.62rem; padding: 2px 5px; border-radius: 999px;
+            color: white; display: inline-flex; align-items: center; gap: 2px;
+        }
+        /* Storage bar */
+        .storage-bar-bg { height:4px; border-radius:2px; background:#e2e8f0; overflow:hidden; }
+        .dark .storage-bar-bg { background:#374151; }
+        .storage-bar-fill { height:100%; border-radius:2px; transition: width 0.4s; }
+    </style>
 </head>
-<body>
-<div id="loading">
-  <div class="spinner"></div>
-  Loading JoyBOT...
+<body class="bg-white dark:bg-zinc-900 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-200">
+
+<div id="app-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-zinc-900">
+    <div class="flex flex-col items-center gap-4">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-slate-500 font-medium">Loading GrokBOT...</p>
+    </div>
 </div>
 
-<button id="selectionCopyBtn" onclick="copySelectedText()">📋 Copy</button>
-<div id="memIndicator" class="mem-indicator" onclick="openMemoryPanel()">🧠 Memory Active</div>
+<div id="app" class="flex h-[100dvh] w-full hidden opacity-0 transition-opacity duration-300">
 
-<div id="app" style="display:none; height:100dvh; height:100vh;" class="flex">
-  <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
-  <aside id="sidebar" class="sidebar">
-    <div style="padding:16px; border-bottom:1px solid var(--border-color);">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          <span style="font-weight:700; font-size:18px; color:var(--text-primary);">JoyBOT</span>
+    <!-- ── SIDEBAR ── -->
+    <aside id="sidebar" class="absolute md:relative z-40 w-72 h-full bg-slate-50 dark:bg-zinc-800 transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col border-r border-slate-200 dark:border-slate-700 shadow-xl md:shadow-none">
+        <div class="p-4 flex items-center justify-between">
+            <button onclick="createNewChat()" class="flex-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-sm font-medium py-2.5 px-4 rounded-full flex items-center gap-2 transition-colors">
+                <i class="fa-solid fa-plus text-slate-500 dark:text-slate-400"></i><span>New Chat</span>
+            </button>
+            <button onclick="toggleSidebar()" class="md:hidden ml-3 text-slate-500">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
         </div>
-        <button class="icon-btn" onclick="toggleSidebar()" title="Close sidebar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-      </div>
-      <button onclick="newChat()" style="width:100%; display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:24px; border:1px solid var(--border-color); background:var(--bg-primary); color:var(--text-primary); cursor:pointer; font-size:14px; font-weight:500; transition:all 0.2s; font-family:'Inter',sans-serif;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        New Chat
-      </button>
-    </div>
-    <div style="flex:1; overflow-y:auto; padding:8px;" id="chatList"></div>
-    <div style="padding:12px; border-top:1px solid var(--border-color);">
-      <button onclick="openMemoryPanel()" class="chat-item" style="width:100%; justify-content:flex-start;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        🧠 Memory
-      </button>
-      <button onclick="openSettings()" class="chat-item" style="width:100%; justify-content:flex-start;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        Settings
-      </button>
-      <button onclick="toggleDark()" class="chat-item" style="width:100%; justify-content:flex-start;" id="darkToggleBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="darkIcon"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        <span id="darkLabel">Dark Mode</span>
-      </button>
-    </div>
-  </aside>
-  <main style="flex:1; display:flex; flex-direction:column; min-width:0; height:100dvh; height:100vh; background:var(--bg-primary);">
-    <header style="display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border-color); gap:8px; flex-shrink:0; background:var(--bg-primary); z-index:10;">
-      <button class="icon-btn" onclick="toggleSidebar()" id="menuBtn" title="Menu">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div style="flex:1; font-weight:600; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="chatTitle">JoyBOT</div>
-      <div id="memStatusBadge" style="font-size:11px; color:var(--accent); font-weight:600; display:none;">🧠</div>
-      <div style="font-size:12px; color:var(--text-tertiary); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" id="modelLabel">No model selected</div>
-    </header>
-    <div id="messagesContainer" style="flex:1; overflow-y:auto; padding:0;">
-      <div id="messages" style="max-width:768px; margin:0 auto; padding:16px 16px 8px;"></div>
-    </div>
-    <div style="flex-shrink:0; border-top:1px solid var(--border-color); background:var(--bg-primary); padding:8px 16px 12px;">
-      <div id="imagePreview" style="display:none; max-width:768px; margin:0 auto 8px; padding:4px 0;">
-        <div style="position:relative; display:inline-block;">
-          <img id="previewImg" class="thumb-preview" src="" alt="preview">
-          <button onclick="clearImage()" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:var(--danger); color:#fff; border:none; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; line-height:1;">×</button>
+        <div class="flex-1 overflow-y-auto px-2 space-y-1" id="chat-history-list"></div>
+        <div class="p-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
+            <!-- Memory Stats Panel -->
+            <div class="px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-zinc-700/60 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-brain text-purple-400"></i> Memory
+                    </span>
+                    <span id="mem-tier-counts" class="text-xs text-slate-400"></span>
+                </div>
+                <div class="storage-bar-bg">
+                    <div id="storage-bar" class="storage-bar-fill bg-blue-500" style="width:0%"></div>
+                </div>
+                <p id="storage-label" class="text-xs text-slate-400"></p>
+            </div>
+            <button onclick="openSettings()" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                <i class="fa-solid fa-gear"></i> Settings & Models
+            </button>
+            <div class="flex items-center justify-between px-3">
+                <span class="text-xs text-slate-400">Dark Mode</span>
+                <button onclick="toggleTheme()" class="text-slate-500 hover:text-blue-500 transition-colors">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
         </div>
-      </div>
-      <div style="max-width:768px; margin:0 auto;">
-        <div id="memInjectionBar" style="display:none;" class="mem-injection-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-          <span id="memInjectionText">Retrieving relevant memories...</span>
+    </aside>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden"></div>
+
+    <!-- ── MAIN ── -->
+    <main class="flex-1 flex flex-col relative w-full h-full bg-white dark:bg-zinc-900">
+        <div class="md:hidden flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+            <button onclick="toggleSidebar()" class="text-slate-500 dark:text-slate-400">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+            <span class="font-semibold text-slate-700 dark:text-slate-200">GrokBOT</span>
+            <div class="w-6"></div>
         </div>
-        <div style="display:flex; align-items:center; gap:4px; background:var(--input-bg); border-radius:24px; padding:8px 8px 8px 16px; border:1px solid var(--border-color); transition:border-color 0.2s; min-height:52px;" id="inputBox">
-          <button class="icon-btn" onclick="document.getElementById('fileInput').click()" title="Upload image">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-          </button>
-          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" onchange="handleImageSelect(event)">
-          <textarea id="chatInput" rows="1" placeholder="Ask JoyBOT anything..." onkeydown="handleInputKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="icon-btn" id="micBtn" onclick="toggleSTT()" title="Voice input">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </button>
-          <button class="icon-btn" onclick="sendMessage()" id="sendBtn" title="Send" style="background:var(--accent); color:#fff; border-radius:50%; width:36px; height:36px; flex-shrink:0;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
+        <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth pb-32"></div>
+        <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 pt-10 pb-4 px-4 z-20">
+            <div class="max-w-3xl mx-auto relative">
+                <div id="image-preview-container" class="hidden absolute -top-16 left-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 flex items-start gap-2">
+                    <img id="image-preview" src="" alt="Preview" class="h-12 w-auto rounded object-cover">
+                    <button onclick="clearImage()" class="text-red-500 hover:text-red-700 bg-white dark:bg-slate-700 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                <div class="flex items-end gap-2 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 pl-4 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
+                    <button onclick="document.getElementById('image-upload').click()" class="p-2 text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors mb-0.5" title="Upload Image">
+                        <i class="fa-solid fa-paperclip text-lg"></i>
+                    </button>
+                    <input type="file" id="image-upload" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="handleImageUpload(event)">
+                    <textarea id="user-input" rows="1" class="w-full bg-transparent border-none focus:ring-0 resize-none py-3 max-h-32 text-slate-800 dark:text-slate-100 placeholder-slate-500" placeholder="Ask Grok..."></textarea>
+                    <button onclick="sendMessage()" id="send-btn" class="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-0.5">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </button>
+                </div>
+                <p class="text-center text-xs text-slate-400 mt-2">GrokBOT can make mistakes. Check important info. 😏</p>
+            </div>
         </div>
-        <div style="text-align:center; margin-top:6px; font-size:11px; color:var(--text-tertiary);">
-          JoyBOT may make mistakes. Verify important information.
-        </div>
-      </div>
-    </div>
-  </main>
+    </main>
 </div>
 
-<!-- Settings Modal -->
-<div id="settingsModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeSettings()">
-  <div class="modal-box">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-      <h2 style="font-size:20px; font-weight:700;">Settings</h2>
-      <button class="icon-btn" onclick="closeSettings()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div style="display:flex; flex-direction:column; gap:16px;">
-      <div>
-        <label style="font-size:13px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">Google API Key</label>
-        <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key">
-      </div>
-      <div>
-        <label style="font-size:13px; font-weight:600; color:var(--text-secondary); display:block; margin-bottom:6px;">Model</label>
-        <div style="display:flex; gap:8px;">
-          <select id="modelSelect" style="flex:1;"><option value="">-- Select a model --</option></select>
-          <button class="btn-secondary" onclick="fetchModels()" id="fetchModelsBtn">Fetch Models</button>
+<!-- ── SETTINGS MODAL ── -->
+<div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden backdrop-blur-sm">
+    <div class="bg-white dark:bg-zinc-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden m-4 flex flex-col max-h-[90vh]">
+        <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+            <h2 class="text-lg font-bold">Settings</h2>
+            <button onclick="closeSettings()" class="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"><i class="fa-solid fa-times text-xl"></i></button>
         </div>
-      </div>
-      <div id="settingsStatus"></div>
-      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px;">
-        <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
-        <button class="btn-primary" onclick="saveSettings()">Save</button>
-      </div>
-      <div style="border-top:1px solid var(--border-color); padding-top:16px;">
-        <div style="font-size:13px; font-weight:600; color:var(--danger); margin-bottom:6px;">Danger Zone</div>
-        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:10px;">This will permanently delete all chat history, messages, and stored data.</p>
-        <button class="btn-danger" onclick="deleteAllData()" style="width:100%;">🗑️ Delete All Chat History &amp; Data</button>
-      </div>
-    </div>
-  </div>
-</div>
+        <div class="p-6 space-y-6 overflow-y-auto">
+            <!-- API Key -->
+            <div>
+                <label class="block text-sm font-medium mb-1">Google Gemini API Key</label>
+                <div class="flex gap-2">
+                    <input type="password" id="api-key-input" class="flex-1 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" placeholder="Enter AI Studio Key">
+                    <button onclick="toggleKeyVisibility()" class="text-slate-500 px-2"><i class="fa-solid fa-eye"></i></button>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">Key is stored locally in your browser.</p>
+            </div>
+            <!-- Model -->
+            <div>
+                <label class="block text-sm font-medium mb-1">AI Model</label>
+                <div class="flex gap-2">
+                    <select id="model-select" class="flex-1 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                        <option value="gemini-1.5-flash">gemini-1.5-flash (Default)</option>
+                    </select>
+                    <button onclick="fetchAvailableModels()" id="refresh-models-btn" class="bg-blue-100 dark:bg-slate-600 text-blue-600 dark:text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors" title="Fetch models">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+                <p id="model-status" class="text-xs text-slate-400 mt-1">Click refresh to load valid models.</p>
+            </div>
+            <!-- System prompt -->
+            <div>
+                <label class="block text-sm font-medium mb-1">System Instructions</label>
+                <textarea id="system-prompt" rows="6" class="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 font-mono"></textarea>
+            </div>
 
-<!-- Memory Panel Modal -->
-<div id="memoryModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeMemoryPanel()">
-  <div class="modal-box" style="max-width:580px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-      <h2 style="font-size:20px; font-weight:700;">🧠 Semantic Memory</h2>
-      <button class="icon-btn" onclick="closeMemoryPanel()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+            <!-- ── ADVANCED MEMORY PANEL ── -->
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group text-purple-400"></i> Tiered Memory System
+                </h3>
+                <!-- User Profile Box -->
+                <div class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3">
+                    <p class="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1 flex items-center gap-1">
+                        <i class="fa-solid fa-user-circle"></i> Persistent User Profile
+                    </p>
+                    <p id="user-profile-display" class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">(none yet — builds automatically from summaries)</p>
+                </div>
+                <!-- Tier legend -->
+                <div class="grid grid-cols-3 gap-2 mb-4 text-center text-xs">
+                    <div class="rounded-lg p-2 bg-amber-50 dark:bg-amber-900/20">
+                        <span class="memory-badge tier-core mb-1 mx-auto"><i class="fa-solid fa-star" style="font-size:8px"></i> Core</span>
+                        <p class="text-slate-500 dark:text-slate-400 mt-1">Never deleted<br>User identity</p>
+                        <p id="count-core" class="font-bold text-amber-600 mt-1">0</p>
+                    </div>
+                    <div class="rounded-lg p-2 bg-blue-50 dark:bg-blue-900/20">
+                        <span class="memory-badge tier-recent mb-1 mx-auto"><i class="fa-solid fa-clock" style="font-size:8px"></i> Recent</span>
+                        <p class="text-slate-500 dark:text-slate-400 mt-1">90-day window<br>Auto-pruned</p>
+                        <p id="count-recent" class="font-bold text-blue-600 mt-1">0</p>
+                    </div>
+                    <div class="rounded-lg p-2 bg-slate-100 dark:bg-slate-700/50">
+                        <span class="memory-badge tier-archive mb-1 mx-auto"><i class="fa-solid fa-box-archive" style="font-size:8px"></i> Archive</span>
+                        <p class="text-slate-500 dark:text-slate-400 mt-1">Compressed<br>Low-priority</p>
+                        <p id="count-archive" class="font-bold text-slate-500 mt-1">0</p>
+                    </div>
+                </div>
+                <!-- Storage meter -->
+                <div class="mb-4">
+                    <div class="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>localStorage usage</span>
+                        <span id="storage-pct-modal">—</span>
+                    </div>
+                    <div class="storage-bar-bg">
+                        <div id="storage-bar-modal" class="storage-bar-fill bg-blue-500" style="width:0%"></div>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Auto-pruning triggers at 80% usage</p>
+                </div>
+                <!-- Actions -->
+                <div class="space-y-2">
+                    <button onclick="manualSummarizeAll()" class="w-full bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 text-sm py-2 px-3 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Summarize Unsummarized Chats
+                    </button>
+                    <button onclick="promoteToCore()" class="w-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300 text-sm py-2 px-3 rounded-lg hover:bg-amber-100 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-star"></i> Promote Current Chat → Core
+                    </button>
+                    <button onclick="runStoragePrune(true)" class="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm py-2 px-3 rounded-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-broom"></i> Run Smart Prune Now
+                    </button>
+                    <button onclick="clearMemoryOnly()" class="w-full text-orange-500 text-sm hover:underline text-left pt-1">Clear all summaries (keep chats)</button>
+                    <button onclick="clearUserProfile()" class="w-full text-slate-400 text-sm hover:underline text-left">Reset User Profile</button>
+                </div>
+            </div>
+            <div class="pt-2 border-t border-slate-200 dark:border-slate-700">
+                <button onclick="clearAllData()" class="text-red-500 text-sm hover:underline">Clear all chat history & data</button>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
+            <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">Save & Close</button>
+        </div>
     </div>
-    <!-- Storage Bar -->
-    <div style="margin-bottom:16px; padding:12px; background:var(--bg-secondary); border-radius:10px;">
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:4px;">
-        <span>Storage Usage</span>
-        <span id="storagePercent">0%</span>
-      </div>
-      <div class="storage-bar">
-        <div class="storage-bar-fill" id="storageBarFill" style="width:0%"></div>
-      </div>
-      <div style="font-size:11px; color:var(--text-tertiary); margin-top:4px;" id="storageDetail">Calculating...</div>
-    </div>
-    <!-- Tier Stats -->
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
-      <div style="text-align:center; padding:10px; background:var(--mem-core); border-radius:8px;">
-        <div style="font-size:20px; font-weight:700;" id="statCore">0</div>
-        <div style="font-size:11px; color:var(--text-secondary);">🔒 Core</div>
-      </div>
-      <div style="text-align:center; padding:10px; background:var(--mem-recent); border-radius:8px;">
-        <div style="font-size:20px; font-weight:700;" id="statRecent">0</div>
-        <div style="font-size:11px; color:var(--text-secondary);">📅 Recent</div>
-      </div>
-      <div style="text-align:center; padding:10px; background:var(--mem-archive); border-radius:8px;">
-        <div style="font-size:20px; font-weight:700;" id="statArchive">0</div>
-        <div style="font-size:11px; color:var(--text-secondary);">📦 Archive</div>
-      </div>
-    </div>
-    <!-- Memory list -->
-    <div id="memoryList" style="max-height:300px; overflow-y:auto;"></div>
-    <!-- Actions -->
-    <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
-      <button class="btn-secondary" onclick="Memory.summarizeActiveChat(true)" style="flex:1;">
-        📝 Summarize Current Chat
-      </button>
-      <button class="btn-secondary" onclick="Memory.pruneByRelevance()" style="flex:1;">
-        🧹 Prune Unused
-      </button>
-      <button class="btn-danger" onclick="clearAllMemory()" style="flex:1;">
-        🗑️ Clear All Memory
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- Rename Modal -->
-<div id="renameModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeRename()">
-  <div class="modal-box" style="max-width:380px;">
-    <h3 style="font-size:17px; font-weight:600; margin-bottom:14px;">Rename Chat</h3>
-    <input type="text" id="renameInput" placeholder="Chat name" onkeydown="if(event.key==='Enter')confirmRename()">
-    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
-      <button class="btn-secondary" onclick="closeRename()">Cancel</button>
-      <button class="btn-primary" onclick="confirmRename()">Rename</button>
-    </div>
-  </div>
-</div>
-
-<div id="lightbox" class="modal-overlay" style="display:none; background:rgba(0,0,0,0.85);" onclick="this.style.display='none'">
-  <img id="lightboxImg" src="" style="max-width:90%; max-height:90%; border-radius:8px; object-fit:contain;">
 </div>
 
 <script>
-(function() {
-'use strict';
+// ======================================================================
+//  CONSTANTS
+// ======================================================================
+const DEFAULT_MODEL      = "gemini-1.5-flash";
+const STATE_KEY          = "GrokBOT_state_v12";   // v12: Structured Progressive Memory
+const SUMMARY_THRESHOLD  = 3;    // min messages before summarizing
+const FULL_SUMMARY_MIN   = 8;    // AI full-summary threshold (below = lightweight)
+const MID_CHAT_THRESHOLD = 20;   // auto mid-chat delta summary
+const TOP_K_SUMMARIES    = 4;    // inject up to 4 relevant summaries
+const MAX_CONTEXT_MSGS   = 18;   // recent messages in active context
+const SUMMARY_MAX_TOKENS = 700;  // token budget for structured summaries
 
-// ================================================================
-// ============ SEMANTIC MEMORY SYSTEM ============================
-// ================================================================
-const Memory = (() => {
-  const KEYS = {
-    CORE:    'JoyBOT_mem_core',
-    RECENT:  'JoyBOT_mem_recent',
-    ARCHIVE: 'JoyBOT_mem_archive'
-  };
-  const RECENT_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days ms
-  const STORAGE_PRUNE_THRESHOLD = 0.80; // 80% full → prune
-  const MAX_RECENT = 50;
-  const MAX_ARCHIVE = 30;
+// ── Tier config ──────────────────────────────────────────────────────
+// CORE   : permanent, never auto-deleted (user identity / key facts)
+// RECENT : 90-day window, retrieved often → stays, rarely → decays
+// ARCHIVE: compressed, pruned first when storage is tight
+const TIER = { CORE: 'core', RECENT: 'recent', ARCHIVE: 'archive' };
+const RECENT_TTL_MS    = 90 * 24 * 60 * 60 * 1000;  // 90 days
+const ARCHIVE_TTL_MS   = 180 * 24 * 60 * 60 * 1000; // 180 days (hard max)
+const STORAGE_PRUNE_PCT= 80;   // trigger prune above this % of ~5 MB
 
-  // ---------- Storage Helpers ----------
-  function loadTier(key) {
-    try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
-  }
-  function saveTier(key, data) {
-    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {
-      console.warn('Memory save error:', e);
-    }
-  }
-  function getAll() {
-    return [
-      ...loadTier(KEYS.CORE).map(m => ({...m, tier:'core'})),
-      ...loadTier(KEYS.RECENT).map(m => ({...m, tier:'recent'})),
-      ...loadTier(KEYS.ARCHIVE).map(m => ({...m, tier:'archive'}))
-    ];
-  }
+const DEFAULT_SYSTEM_PROMPT = `তুমি একজন অত্যন্ত বুদ্ধিমান, স্মার্ট এবং বন্ধুসুলভ এআই সহকারী। তোমার কথা বলার ধরন হবে কৌতুকপূর্ণ এবং চটপটে। তুমি কঠিন বিষয়গুলোকে খুব সহজ এবং মজাদার উদাহরণ দিয়ে ব্যাখ্যা করো। তোমার উত্তরে বুদ্ধির ছটা থাকবে। কোড দেওয়ার সময় পরিষ্কার ফরম্যাট ব্যবহার করবে এবং সংক্ষিপ্ত ব্যাখ্যা দেবে। ব্যবহারকারীর সাথে এমনভাবে কথা বলবে যেন তুমি একজন জ্ঞানী অথচ হাসি-খুশি বন্ধু। কার্যকরী উত্তর দাও।`;
 
-  // ---------- Storage Usage ----------
-  function getStorageUsage() {
-    let used = 0;
-    for (let k in localStorage) {
-      if (!localStorage.hasOwnProperty(k)) continue;
-      used += (localStorage[k].length + k.length) * 2; // UTF-16
-    }
-    const total = 5 * 1024 * 1024; // ~5MB typical localStorage
-    return { used, total, ratio: used / total };
-  }
+// ======================================================================
+//  STATE
+// ======================================================================
+// Summary object shape:
+// {
+//   id, chatId, title, summary, keywords:[],
+//   tier: 'core'|'recent'|'archive',
+//   timestamp,          // chat creation time
+//   updatedAt,          // last summary update
+//   messageCount,
+//   retrieveCount,      // ★ how many times retrieved
+//   lastRetrievedAt,    // ★ epoch ms of last retrieval
+//   decayScore          // ★ computed at prune time (lower = prune first)
+// }
+let state = {
+    apiKey:          "",
+    model:           DEFAULT_MODEL,
+    systemPrompt:    DEFAULT_SYSTEM_PROMPT,
+    theme:           "light",
+    chats:           [],
+    summaries:       [],
+    userProfile:     "",   // persistent cross-session user identity profile
+    currentChatId:   null,
+    availableModels: []
+};
 
-  // ---------- TF-IDF Vector ----------
-  const STOPWORDS = new Set(['a','an','the','is','it','in','on','at','to','for','of','and','or','but','with','as','by','from','i','me','my','we','you','he','she','they','this','that','was','are','be','been','have','has','had','do','did','will','would','can','could','may','might','am','were','their','our','your']);
+let imagePayload     = null;
+let isGenerating     = false;
+let editingMessageId = null;
+let isSummarizing    = false;
 
-  function tokenize(text) {
-    return text.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF\s]/g, ' ')
-      .split(/\s+/).filter(w => w.length > 1 && !STOPWORDS.has(w));
-  }
+// ======================================================================
+//  INIT
+// ======================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    loadState();
+    initTheme();
+    renderSidebar();
+    refreshMemoryUI();
 
-  function computeTFIDF(tokens) {
-    const tf = {};
-    tokens.forEach(t => tf[t] = (tf[t] || 0) + 1);
-    const total = tokens.length || 1;
-    Object.keys(tf).forEach(k => tf[k] /= total);
-    return tf;
-  }
-
-  function cosineSimilarity(vecA, vecB) {
-    const keys = new Set([...Object.keys(vecA), ...Object.keys(vecB)]);
-    let dot = 0, magA = 0, magB = 0;
-    keys.forEach(k => {
-      const a = vecA[k] || 0, b = vecB[k] || 0;
-      dot += a * b; magA += a * a; magB += b * b;
+    const textarea = document.getElementById('user-input');
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+        if (this.value === '') this.style.height = 'auto';
     });
-    return magA && magB ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0;
-  }
+    textarea.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!isGenerating) sendMessage(); }
+    });
+    setTimeout(() => {
+        document.getElementById('app-loader').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('app').classList.add('opacity-100');
+    }, 500);
+    populateModelDropdown();
+});
 
-  // ---------- 1. SUMMARIZER ----------
-  async function summarizeMessages(messages, apiKey, model) {
-    if (!apiKey || !model || messages.length < 4) return null;
-    const transcript = messages
-      .filter(m => m.text && !m.error)
-      .map(m => `${m.role === 'user' ? 'User' : 'JoyBOT'}: ${m.text.substring(0, 500)}`)
-      .join('\n');
-    if (transcript.trim().length < 100) return null;
+// ======================================================================
+//  PERSISTENCE
+// ======================================================================
+function loadState() {
+    const saved = localStorage.getItem(STATE_KEY);
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        state = { ...state, ...parsed };
+        if (!state.summaries) state.summaries = [];
 
-    const prompt = `Analyze this conversation and produce a JSON object with two fields:
-1. "coreFacts": array of strings for permanent facts about the user (name, profession, location, preferences, goals - only if clearly stated)
-2. "summary": a compact 2-3 sentence summary of the conversation topics and key points
+        // Migrate old summaries that lack tier / structured fields
+        state.summaries = state.summaries.map(s => ({
+            retrieveCount:   0,
+            lastRetrievedAt: s.timestamp,
+            tier:            TIER.RECENT,
+            updatedAt:       s.timestamp,
+            structured:      null,
+            isShort:         false,
+            ...s
+        }));
+        if (!state.userProfile) state.userProfile = "";
 
-Respond ONLY with valid JSON, no markdown.
+        // Run passive cleanup (no API calls needed)
+        passiveCleanup();
 
-Conversation:
-${transcript.substring(0, 3000)}`;
+        if (!state.systemPrompt || state.systemPrompt.includes("বেপরোয়া"))
+            state.systemPrompt = DEFAULT_SYSTEM_PROMPT;
+        if (state.chats.length > 0 && !state.currentChatId)
+            state.currentChatId = state.chats[0].id;
+    } else {
+        state.systemPrompt = DEFAULT_SYSTEM_PROMPT;
+    }
+    document.getElementById('api-key-input').value   = state.apiKey;
+    document.getElementById('system-prompt').value   = state.systemPrompt;
+    if (state.currentChatId) loadChat(state.currentChatId); else showWelcome();
+}
 
+function saveState() { localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
+
+// ======================================================================
+//  ████████  TIERED MEMORY ENGINE  ████████
+// ======================================================================
+
+/**
+ * PASSIVE CLEANUP
+ * ───────────────
+ * Runs on startup — no API calls.
+ * - Removes RECENT summaries older than 90 days
+ * - Removes ARCHIVE summaries older than 180 days
+ * - CORE summaries are NEVER removed here
+ * - Removes orphan summaries (deleted chats)
+ * - Runs storage-aware prune if needed
+ */
+function passiveCleanup() {
+    const now    = Date.now();
+    const before = state.summaries.length;
+
+    state.summaries = state.summaries.filter(s => {
+        if (s.tier === TIER.CORE)    return true;                          // never expire
+        if (s.tier === TIER.RECENT)  return (now - s.updatedAt) < RECENT_TTL_MS;
+        if (s.tier === TIER.ARCHIVE) return (now - s.updatedAt) < ARCHIVE_TTL_MS;
+        return true;
+    });
+
+    // Remove orphans
+    const chatIds = new Set(state.chats.map(c => c.id));
+    state.summaries = state.summaries.filter(s => s.tier === TIER.CORE || chatIds.has(s.chatId));
+
+    if (state.summaries.length < before) saveState();
+
+    // Storage pressure check
+    runStoragePrune(false);
+}
+
+/**
+ * RELEVANCE DECAY SCORE
+ * ─────────────────────
+ * Higher score = more valuable → keep longer.
+ * Formula:
+ *   score = (retrieveCount * 3)
+ *           + recencyBonus          (days since last retrieval, inverted)
+ *           + tierBonus             (core=100, recent=10, archive=0)
+ *
+ * Used to decide WHICH summaries to prune first (lowest score goes first).
+ */
+function computeDecayScore(s) {
+    const now          = Date.now();
+    const daysSince    = (now - (s.lastRetrievedAt || s.timestamp)) / 86400000;
+    const recencyBonus = Math.max(0, 30 - daysSince);
+    const tierBonus    = s.tier === TIER.CORE   ? 100
+                       : s.tier === TIER.RECENT ?  10
+                       :                            0;
+    const shortPenalty = s.isShort ? -2 : 0;   // mini-summaries pruned slightly sooner
+    return (s.retrieveCount || 0) * 3 + recencyBonus + tierBonus + shortPenalty;
+}
+
+/**
+ * STORAGE-AWARE PRUNING
+ * ──────────────────────
+ * Estimates localStorage usage.
+ * If > STORAGE_PRUNE_PCT, removes summaries with lowest decay score
+ * (Archives first, then least-retrieved Recents).
+ * Core summaries are NEVER pruned.
+ *
+ * @param {boolean} verbose  - show alert when called manually
+ */
+function runStoragePrune(verbose = false) {
+    try {
+        const used  = new Blob([JSON.stringify(localStorage)]).size;
+        const limit = 5 * 1024 * 1024;  // ~5 MB estimate
+        const pct   = Math.round((used / limit) * 100);
+
+        updateStorageBar(pct, used, limit);
+
+        if (pct < STORAGE_PRUNE_PCT) {
+            if (verbose) alert(`Storage at ${pct}% — no pruning needed.`);
+            return;
+        }
+
+        // Score all non-Core summaries and sort ascending (worst first)
+        const candidates = state.summaries
+            .filter(s => s.tier !== TIER.CORE)
+            .map(s => ({ ...s, _decay: computeDecayScore(s) }))
+            .sort((a, b) => a._decay - b._decay);
+
+        let pruned = 0;
+        // Remove up to 30% of non-core summaries or until below 70%
+        const target = Math.ceil(candidates.length * 0.3);
+        const toRemove = new Set(candidates.slice(0, target).map(s => s.id));
+
+        state.summaries = state.summaries.filter(s => !toRemove.has(s.id));
+        pruned = toRemove.size;
+
+        saveState();
+        refreshMemoryUI();
+        if (verbose) alert(`Pruned ${pruned} low-value summary(s). Storage is now healthier.`);
+    } catch(e) {
+        console.warn("Storage prune error:", e);
+    }
+}
+
+function updateStorageBar(pct, used, limit) {
+    const color = pct > 80 ? '#ef4444' : pct > 60 ? '#f59e0b' : '#3b82f6';
+    const usedKB = Math.round(used / 1024);
+    const limitKB = Math.round(limit / 1024);
+    const label = `${usedKB} KB / ${limitKB} KB (${pct}%)`;
+
+    ['storage-bar','storage-bar-modal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.width = Math.min(pct,100) + '%'; el.style.background = color; }
+    });
+    const sl = document.getElementById('storage-label');
+    if (sl) sl.textContent = label;
+    const sp = document.getElementById('storage-pct-modal');
+    if (sp) sp.textContent = label;
+}
+
+/**
+ * SUMMARIZER
+ * ──────────
+ * Creates or updates a summary for a chat.
+ * Newly created summaries start as RECENT tier.
+ * Tier can be upgraded to CORE via promoteToCore().
+ */
+async function triggerSummarize(chatId) {
+    if (!chatId || isSummarizing) return;
+    const chat = state.chats.find(c => c.id === chatId);
+    if (!chat) return;
+
+    const validMsgs = chat.messages.filter(m => m.text && !m.text.startsWith("⚠️"));
+    if (validMsgs.length < SUMMARY_THRESHOLD) return;
+
+    const existing = state.summaries.find(s => s.chatId === chatId);
+    if (existing && existing.messageCount === chat.messages.length) return;
+
+    isSummarizing = true;
+    try {
+        const now     = Date.now();
+        const isShort = validMsgs.length < FULL_SUMMARY_MIN;
+        let structured;   // final structured object
+
+        // ════════════════════════════════════════════════════════════════
+        //  PATH A: Lightweight Mini-Summary (3–7 msgs, NO API call)
+        //  Extracts structured fields from raw text — zero token cost.
+        // ════════════════════════════════════════════════════════════════
+        if (isShort) {
+            const san       = t => t.replace(/`/g, "'").replace(/\${/g, '$(');
+            const userTexts = validMsgs.filter(m => m.role === 'user').map(m => san(m.text.slice(0, 350)));
+            const aiTexts   = validMsgs.filter(m => m.role !== 'user').map(m => san(m.text.slice(0, 200)));
+
+            // Heuristic profile extraction from user text
+            const allUser = userTexts.join(' ');
+            const nameMatch = allUser.match(/(?:আমার নাম|my name is|i am|i'm)\s+([A-Za-zঀ-৿]+)/i);
+            const profMatch = allUser.match(/(?:আমি|i am|i'm|i work as)\s+(?:একজন|a|an)?\s*([A-Za-zঀ-৿\s]{2,25}(?:er|or|ist|ent|r)?)/i);
+
+            structured = {
+                profile:     nameMatch ? `Name: ${nameMatch[1]}` : (profMatch ? `Profession hint: ${profMatch[1]}` : ""),
+                topics:      userTexts.slice(0, 3).join(' | ').slice(0, 300),
+                facts:       "",
+                preferences: "",
+                decisions:   "",
+                narrative:   aiTexts[0] ? `AI briefly answered about: ${aiTexts[0].slice(0, 150)}` : "",
+            };
+
+        // ════════════════════════════════════════════════════════════════
+        //  PATH B: Full Structured AI Summary (8+ msgs)
+        //  Uses a JSON-structured prompt for precise extraction.
+        //  Progressive: if existing summary exists, only new messages
+        //  are sent as DELTA, then merged with the previous structure.
+        // ════════════════════════════════════════════════════════════════
+        } else {
+            if (!state.apiKey) { isSummarizing = false; return; }
+
+            // Determine which messages are NEW since last summary
+            // NOTE: existing.messageCount tracks total chat.messages (not filtered),
+            // so we must filter AFTER slicing from the raw array to avoid index mismatch.
+            const prevMsgCount = existing ? (existing.messageCount || 0) : 0;
+            const allMsgs      = chat.messages;
+            const newRaw       = allMsgs.slice(prevMsgCount);
+            const newMsgs      = newRaw.filter(m => m.text && !m.text.startsWith("⚠️"));
+            const isDelta      = existing && prevMsgCount > 0 && newMsgs.length >= 1;
+
+            const sanitize = t => t.replace(/`/g, "'").replace(/\${/g, '$(');
+            const formatTranscript = (msgs, limit = 500) =>
+                msgs.map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${sanitize(m.text.slice(0, limit))}`).join('\n');
+
+            let prompt;
+            if (isDelta) {
+                // ── DELTA MERGE prompt ───────────────────────────────────
+                const prevStructured = existing.structured || {};
+                const prevNarrative  = [
+                    prevStructured.profile    ? `PROFILE: ${prevStructured.profile}`       : '',
+                    prevStructured.topics     ? `TOPICS: ${prevStructured.topics}`          : '',
+                    prevStructured.facts      ? `FACTS: ${prevStructured.facts}`            : '',
+                    prevStructured.preferences? `PREFERENCES: ${prevStructured.preferences}`: '',
+                    prevStructured.decisions  ? `DECISIONS: ${prevStructured.decisions}`    : '',
+                ].filter(Boolean).join('\n');
+
+                prompt = `You are a memory extractor for a chatbot. Below is an EXISTING memory summary and NEW conversation messages.
+
+EXISTING MEMORY:
+${prevNarrative}
+
+NEW MESSAGES TO INTEGRATE:
+${formatTranscript(newMsgs, 450)}
+
+Task: Update the memory by merging new information into the existing structure.
+Reply ONLY with a valid JSON object — no markdown, no explanation:
+{
+  "profile":     "User's name, age, location, profession, language — cumulative",
+  "topics":      "All topics discussed (old + new), comma-separated",
+  "facts":       "Specific facts, numbers, dates, names mentioned — cumulative",
+  "preferences": "User's likes, dislikes, goals, habits — cumulative",
+  "decisions":   "Decisions made or conclusions reached — cumulative",
+  "narrative":   "2-3 sentence plain summary of the full conversation arc"
+}`;
+            } else {
+                // ── FRESH FULL SUMMARY prompt ────────────────────────────
+                prompt = `You are a memory extractor for a chatbot. Analyze the conversation below carefully.
+
+CONVERSATION:
+${formatTranscript(validMsgs, 450)}
+
+Reply ONLY with a valid JSON object — no markdown, no explanation:
+{
+  "profile":     "User's name, age, location, profession, language, any personal identity info",
+  "topics":      "Main topics discussed, comma-separated",
+  "facts":       "Specific facts: numbers, dates, names, technical terms, code snippets mentioned",
+  "preferences": "User's preferences, likes, dislikes, goals, working style",
+  "decisions":   "Key decisions made or conclusions reached in this chat",
+  "narrative":   "2-3 sentence plain-language summary of what happened in this conversation"
+}`;
+            }
+
+            const res = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${state.apiKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.15, maxOutputTokens: SUMMARY_MAX_TOKENS }
+                    })
+                }
+            );
+            if (!res.ok) throw new Error("Summary API error");
+            const data = await res.json();
+            const raw  = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (!raw) throw new Error("Empty summary response");
+
+            // Robust JSON parse — strip markdown fences if present
+            let parsed;
+            try {
+                const clean = raw
+                    .replace(/^```\s*(?:json)?\s*/i, '')
+                    .replace(/\s*```\s*$/, '')
+                    .trim();
+                parsed = JSON.parse(clean);
+            } catch(e) {
+                // Fallback: treat entire response as narrative
+                parsed = { profile:"", topics:"", facts:"", preferences:"", decisions:"", narrative: raw.slice(0,400) };
+            }
+            // Normalize: ensure all expected fields exist (model may omit some)
+            structured = {
+                profile:     "",
+                topics:      "",
+                facts:       "",
+                preferences: "",
+                decisions:   "",
+                narrative:   "",
+                ...parsed
+            };
+        }
+
+        // ── Build flat summary string for retrieval & display ───────────
+        const summaryText = [
+            structured.profile    ? `👤 ${structured.profile}`       : '',
+            structured.topics     ? `📌 Topics: ${structured.topics}` : '',
+            structured.facts      ? `🔢 Facts: ${structured.facts}`   : '',
+            structured.preferences? `❤️ Prefs: ${structured.preferences}` : '',
+            structured.decisions  ? `✅ Decisions: ${structured.decisions}` : '',
+            structured.narrative  ? `📝 ${structured.narrative}`      : '',
+        ].filter(Boolean).join('\n');
+
+        // ── Extract user profile for persistent global injection ────────
+        if (structured.profile && structured.profile.trim()) {
+            state.userProfile = mergeUserProfile(state.userProfile || "", structured.profile);
+        }
+
+        const keywords   = extractKeywords(summaryText + ' ' + chat.title);
+        const idx        = state.summaries.findIndex(s => s.chatId === chatId);
+        const base       = idx >= 0 ? state.summaries[idx] : {};
+
+        const summaryObj = {
+            id:              `sum_${chatId}`,
+            chatId,
+            title:           chat.title,
+            summary:         summaryText,
+            structured,                          // raw structured object for delta merges
+            keywords,
+            tier:            base.tier || TIER.RECENT,
+            timestamp:       chat.timestamp,
+            updatedAt:       now,
+            messageCount:    chat.messages.length,
+            retrieveCount:   base.retrieveCount   || 0,
+            lastRetrievedAt: base.lastRetrievedAt || now,
+            isShort,
+        };
+
+        if (idx >= 0) state.summaries[idx] = summaryObj;
+        else          state.summaries.push(summaryObj);
+
+        saveState();
+        renderSidebar();
+        refreshMemoryUI();
+    } catch(e) {
+        console.warn("Summarize failed:", e.message);
+    } finally {
+        isSummarizing = false;
+    }
+}
+
+/**
+ * USER PROFILE MERGER
+ * ───────────────────
+ * Merges new profile fragment into the global persistent profile.
+ * Keeps it compact (max 300 chars) — longer parts get trimmed.
+ */
+function mergeUserProfile(existing, newFrag) {
+    if (!existing) return newFrag.slice(0, 300);
+    // Simple merge: combine, deduplicate sentences by first word
+    const combined = existing + '; ' + newFrag;
+    const parts    = combined.split(/;/).map(s => s.trim()).filter(Boolean);
+    const seen     = new Set();
+    const deduped  = parts.filter(p => {
+        const key = p.split(' ').slice(0,3).join(' ').toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+    });
+    return deduped.join('; ').slice(0, 350);
+}
+
+/**
+ * PROMOTE TO CORE
+ * ───────────────
+ * User manually marks a chat's summary as Core (permanent).
+ * Called from Settings button.
+ */
+function promoteToCore() {
+    if (!state.currentChatId) { alert("Open a chat first."); return; }
+    const s = state.summaries.find(s => s.chatId === state.currentChatId);
+    if (!s) {
+        alert("No summary yet for this chat. Summarize it first.");
+        return;
+    }
+    s.tier = TIER.CORE;
+    s.updatedAt = Date.now();
+    saveState();
+    refreshMemoryUI();
+    alert(`"${s.title}" promoted to Core Memory — it will never be auto-deleted.`);
+}
+
+/**
+ * KEYWORD EXTRACTOR
+ * ─────────────────
+ */
+function extractKeywords(text) {
+    const stopwords = new Set([
+        'the','a','an','is','in','of','to','and','or','for','with','on','at',
+        'by','from','this','that','it','as','be','was','are','were','been',
+        'has','have','had','do','does','did','will','would','could','should',
+        'may','might','shall','user','ai','chat','said','about','also',
+        'but','not','so','if','then','than','when','what','how','who','which',
+        'one','can','get','got','use','used','make','made','want','wants','need',
+        'just','also','very','more','some','them','they','their','its'
+    ]);
+    return text.toLowerCase()
+        .replace(/[^a-z0-9\u0980-\u09FF\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopwords.has(w))
+        .slice(0, 40);
+}
+
+/**
+ * SIMILARITY (Cosine-like)
+ */
+function computeSimilarity(qKeys, sKeys) {
+    if (!qKeys.length || !sKeys.length) return 0;
+    const qSet = new Set(qKeys), sSet = new Set(sKeys);
+    let overlap = 0;
+    qSet.forEach(w => { if (sSet.has(w)) overlap++; });
+    return overlap / Math.sqrt(qSet.size * sSet.size);
+}
+
+/**
+ * RETRIEVER
+ * ─────────
+ * Retrieves TOP_K_SUMMARIES relevant summaries.
+ * - Core summaries always get a +0.3 bonus to similarity score
+ * - Increments retrieveCount and updates lastRetrievedAt (decay tracking)
+ */
+function retrieveRelevantSummaries(queryText) {
+    if (!state.summaries.length) return [];
+    const qKeys = extractKeywords(queryText);
+
+    const candidates = state.summaries.filter(s => s.chatId !== state.currentChatId);
+    if (!candidates.length) return [];
+
+    let scored;
+    if (!qKeys.length) {
+        // No keywords — use recency + tier priority
+        scored = candidates
+            .map(s => ({ ...s, score: s.tier === TIER.CORE ? 1 : 0 }))
+            .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+    } else {
+        scored = candidates
+            .map(s => {
+                const sim   = computeSimilarity(qKeys, s.keywords || []);
+                const bonus = s.tier === TIER.CORE ? 0.3 : 0;
+                return { ...s, score: sim + bonus };
+            })
+            .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+    }
+
+    const top = scored.slice(0, TOP_K_SUMMARIES);
+
+    // ── Relevance Decay tracking ──────────────────────────────────────
+    const now = Date.now();
+    top.forEach(retrieved => {
+        const idx = state.summaries.findIndex(s => s.id === retrieved.id);
+        if (idx >= 0) {
+            state.summaries[idx].retrieveCount   = (state.summaries[idx].retrieveCount || 0) + 1;
+            state.summaries[idx].lastRetrievedAt = now;
+        }
+    });
+    // Save decay tracking — done after retrieval to not block response
+    saveState();
+
+    return top;
+}
+
+/**
+ * MEMORY CONTEXT BUILDER
+ * ──────────────────────
+ * Builds the injected memory string for the system prompt.
+ * Core memories are labeled differently to signal permanence.
+ */
+function getSemanticMemoryContext(queryText) {
+    const retrieved = retrieveRelevantSummaries(queryText);
+
+    let ctx = "";
+
+    // ── 1. Always inject global User Profile (if exists) ───────────────
+    // This ensures the model always knows who it is talking to,
+    // regardless of which specific summaries were retrieved.
+    if (state.userProfile && state.userProfile.trim()) {
+        ctx += "\n\n=== PERSISTENT USER PROFILE ===\n";
+        ctx += "(Always use this to recognise and personalise for the user.)\n";
+        ctx += state.userProfile + "\n";
+        ctx += "=== END PROFILE ===\n";
+    }
+
+    if (!retrieved.length) return ctx;
+
+    // ── 2. Inject retrieved structured session memories ────────────────
+    ctx += "\n\n--- RELEVANT MEMORY FROM PAST SESSIONS ---\n";
+    ctx += "(Use silently. Reference naturally when helpful. Do NOT recite these verbatim.)\n\n";
+
+    retrieved.forEach((s, i) => {
+        const date    = new Date(s.updatedAt || s.timestamp).toLocaleDateString('en-BD');
+        const tierTag = s.tier === TIER.CORE ? "⭐ CORE" : s.isShort ? "💬 Mini" : "🧠 Full";
+        ctx += `[${tierTag} — "${s.title}" (${date})]:\n`;
+
+        // If structured data exists, inject each field with its label
+        // so the model can parse and use them precisely.
+        if (s.structured && !s.isShort) {
+            const st = s.structured;
+            if (st.profile)     ctx += `  👤 Profile: ${st.profile}\n`;
+            if (st.topics)      ctx += `  📌 Topics: ${st.topics}\n`;
+            if (st.facts)       ctx += `  🔢 Facts: ${st.facts}\n`;
+            if (st.preferences) ctx += `  ❤️  Prefs: ${st.preferences}\n`;
+            if (st.decisions)   ctx += `  ✅ Decisions: ${st.decisions}\n`;
+            if (st.narrative)   ctx += `  📝 ${st.narrative}\n`;
+        } else {
+            ctx += s.summary + "\n";
+        }
+        ctx += "\n";
+    });
+
+    ctx += "--- END OF MEMORY ---\n";
+    return ctx;
+}
+
+/**
+ * MANUAL SUMMARIZE ALL
+ */
+async function manualSummarizeAll() {
+    if (!state.apiKey) { alert("Please save your API key first."); return; }
+    const btn  = document.querySelector('[onclick="manualSummarizeAll()"]');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Summarizing...';
+    btn.disabled  = true;
+    let count = 0;
+    for (const chat of state.chats) {
+        const validCount = chat.messages.filter(m => m.text && !m.text.startsWith("⚠️")).length;
+        if (validCount >= SUMMARY_THRESHOLD) {
+            const ex = state.summaries.find(s => s.chatId === chat.id);
+            if (!ex || ex.messageCount !== chat.messages.length) {
+                await triggerSummarize(chat.id);
+                await new Promise(r => setTimeout(r, 900));
+                count++;
+            }
+        }
+    }
+    btn.innerHTML = orig; btn.disabled = false;
+    refreshMemoryUI();
+    alert(`Done! Summarized ${count} chat(s). Total: ${state.summaries.length} memories.`);
+    renderSidebar();
+}
+
+/**
+ * REFRESH MEMORY UI
+ * ─────────────────
+ * Updates sidebar stats + settings modal counts.
+ */
+function refreshMemoryUI() {
+    const core    = state.summaries.filter(s => s.tier === TIER.CORE).length;
+    const recent  = state.summaries.filter(s => s.tier === TIER.RECENT).length;
+    const archive = state.summaries.filter(s => s.tier === TIER.ARCHIVE).length;
+
+    const setTxt = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+    setTxt('count-core',    core);
+    setTxt('count-recent',  recent);
+    setTxt('count-archive', archive);
+    setTxt('mem-tier-counts', `⭐${core} 🕐${recent} 📦${archive}`);
+
+    // Refresh storage bar
+    try {
+        const used  = new Blob([JSON.stringify(localStorage)]).size;
+        const limit = 5 * 1024 * 1024;
+        updateStorageBar(Math.round((used/limit)*100), used, limit);
+    } catch(e) {}
+}
+
+// ======================================================================
+//  THEME
+// ======================================================================
+function initTheme() {
+    if (state.theme === 'dark' || (!state.theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        document.getElementById('theme-icon').classList.replace('fa-moon','fa-sun');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+}
+function toggleTheme() { state.theme = state.theme === 'light' ? 'dark' : 'light'; initTheme(); saveState(); }
+
+// ======================================================================
+//  MODEL FETCH
+// ======================================================================
+async function fetchAvailableModels() {
+    const key    = document.getElementById('api-key-input').value.trim();
+    const btn    = document.getElementById('refresh-models-btn');
+    const status = document.getElementById('model-status');
+    if (!key) { status.innerText = "Please enter API Key."; status.classList.add("text-red-500"); return; }
+    btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+    try {
+        const res  = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+        if (!res.ok) throw new Error("Failed.");
+        const data = await res.json();
+        state.availableModels = data.models
+            .filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"))
+            .map(m => m.name.replace("models/",""));
+        if (!state.availableModels.includes(state.model)) state.model = state.availableModels[0];
+        populateModelDropdown();
+        status.innerText = `Loaded ${state.availableModels.length} models.`;
+        status.classList.remove("text-red-500");
+        saveState();
+    } catch(e) { status.innerText = "Error: "+e.message; status.classList.add("text-red-500"); }
+    finally { btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>'; }
+}
+
+function populateModelDropdown() {
+    const select = document.getElementById('model-select');
+    select.innerHTML = "";
+    (state.availableModels.length ? state.availableModels : [DEFAULT_MODEL]).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m; opt.text = m;
+        if (m === state.model) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+// ======================================================================
+//  SETTINGS
+// ======================================================================
+function openSettings() {
+    refreshMemoryUI();
+    // Show current userProfile in memory panel if it exists
+    const profEl = document.getElementById('user-profile-display');
+    if (profEl) profEl.textContent = state.userProfile || "(none yet — will build automatically)";
+    document.getElementById('settings-modal').classList.remove('hidden');
+}
+function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+function saveSettings() {
+    state.apiKey       = document.getElementById('api-key-input').value.trim();
+    state.model        = document.getElementById('model-select').value;
+    state.systemPrompt = document.getElementById('system-prompt').value;
+    saveState(); closeSettings();
+}
+function toggleKeyVisibility() {
+    const i = document.getElementById('api-key-input');
+    i.type = i.type === 'password' ? 'text' : 'password';
+}
+function clearAllData() {
+    if (confirm("Delete ALL chats and memory?")) { localStorage.removeItem(STATE_KEY); location.reload(); }
+}
+function clearMemoryOnly() {
+    if (confirm("Clear all summaries? Chats will be kept.")) {
+        state.summaries = [];
+        saveState(); refreshMemoryUI();
+        alert("All summaries cleared.");
+    }
+}
+function clearUserProfile() {
+    if (confirm("Reset the persistent User Profile? This removes cross-session identity info.")) {
+        state.userProfile = "";
+        saveState();
+        alert("User Profile reset.");
+    }
+}
+
+// ======================================================================
+//  CHAT MANAGEMENT
+// ======================================================================
+function createNewChat() {
+    // Capture current chatId before it changes, then summarize in background
+    const prevChatId = state.currentChatId;
+    if (prevChatId) setTimeout(() => triggerSummarize(prevChatId), 100);
+    const id = Date.now().toString();
+    state.chats.unshift({ id, title:"New Chat", timestamp:Date.now(), messages:[] });
+    state.currentChatId = id;
+    saveState(); renderSidebar(); loadChat(id);
+    if (window.innerWidth < 768) toggleSidebar();
+}
+
+function loadChat(chatId) {
+    state.currentChatId = chatId;
+    const chat = state.chats.find(c => c.id === chatId);
+    const container = document.getElementById('messages-container');
+    container.innerHTML = "";
+    if (!chat || !chat.messages.length) showWelcome();
+    else chat.messages.forEach((msg, idx) => renderMessage(msg, idx));
+    renderSidebar();
+    scrollToBottom();
+}
+
+function deleteChat(e, id) {
+    e.stopPropagation();
+    if (!confirm("Delete this chat?")) return;
+    // Keep CORE summaries even when chat is deleted
+    state.summaries = state.summaries.filter(s => s.chatId !== id || s.tier === TIER.CORE);
+    state.chats = state.chats.filter(c => c.id !== id);
+    state.currentChatId = state.chats.length ? state.chats[0].id : null;
+    saveState(); renderSidebar();
+    if (state.currentChatId) loadChat(state.currentChatId);
+    else { document.getElementById('messages-container').innerHTML = ""; showWelcome(); }
+    refreshMemoryUI();
+}
+
+function renderSidebar() {
+    const list = document.getElementById('chat-history-list');
+    list.innerHTML = "";
+    state.chats.forEach(chat => {
+        const s = state.summaries.find(s => s.chatId === chat.id);
+        const tierClass = !s ? '' : s.tier === TIER.CORE ? 'tier-core' : s.tier === TIER.ARCHIVE ? 'tier-archive' : 'tier-recent';
+        const tierIcon  = !s ? '' : s.tier === TIER.CORE ? '⭐' : s.isShort ? '💬' : '🧠';
+        const div = document.createElement('div');
+        div.className = `group flex items-center justify-between p-3 rounded-lg cursor-pointer text-sm transition-colors ${chat.id === state.currentChatId ? 'bg-blue-100 dark:bg-slate-700 text-blue-700 dark:text-blue-100' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`;
+        div.onclick = () => {
+            if (state.currentChatId !== chat.id) {
+                const prevId = state.currentChatId;
+                if (prevId) setTimeout(() => triggerSummarize(prevId), 100);
+            }
+            loadChat(chat.id);
+        };
+        div.innerHTML = `
+            <div class="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                <i class="fa-regular fa-message flex-shrink-0"></i>
+                <span class="truncate">${chat.title}</span>
+                ${s ? `<span class="memory-badge ${tierClass} flex-shrink-0" style="font-size:10px">${tierIcon}</span>` : ''}
+            </div>
+            ${chat.id === state.currentChatId ? `<button onclick="deleteChat(event,'${chat.id}')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity ml-2"><i class="fa-solid fa-trash"></i></button>` : ''}
+        `;
+        list.appendChild(div);
+    });
+}
+
+function showWelcome() {
+    const core   = state.summaries.filter(s => s.tier === TIER.CORE).length;
+    const recent = state.summaries.filter(s => s.tier === TIER.RECENT).length;
+    document.getElementById('messages-container').innerHTML = `
+        <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center opacity-80 mt-[-50px]">
+            <div class="w-16 h-16 bg-gradient-to-tr from-blue-400 to-red-400 rounded-2xl mb-6 shadow-lg animate-pulse"></div>
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 mb-2">Hi Joy</h1>
+            <p class="text-slate-500 dark:text-slate-400 max-w-md">Ready to chat with GrokBOT?</p>
+            <div class="flex gap-3 mt-3 text-xs">
+                <span class="text-amber-500 flex items-center gap-1">⭐ ${core} Core</span>
+                <span class="text-blue-400 flex items-center gap-1">🧠 ${recent} Recent</span>
+            </div>
+        </div>`;
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('-translate-x-full');
+    document.getElementById('sidebar-overlay').classList.toggle('hidden');
+}
+
+// ======================================================================
+//  MESSAGE OPERATIONS
+// ======================================================================
+function deleteMessage(index) {
+    if (!confirm("Delete this message?")) return;
+    const chat = state.chats.find(c => c.id === state.currentChatId);
+    if (chat) { chat.messages.splice(index, 1); saveState(); loadChat(state.currentChatId); }
+}
+function toggleEdit(index) { editingMessageId = index; loadChat(state.currentChatId); }
+function cancelEdit()      { editingMessageId = null;  loadChat(state.currentChatId); }
+function submitEdit(index) {
+    const val = document.getElementById(`edit-input-${index}`)?.value.trim();
+    if (!val) return;
+    const chat = state.chats.find(c => c.id === state.currentChatId);
+    if (chat) { chat.messages[index].text = val; saveState(); editingMessageId = null; loadChat(state.currentChatId); }
+}
+
+function renderMessage(msg, index) {
+    const container = document.getElementById('messages-container');
+    document.getElementById('welcome-screen')?.remove();
+    const isUser    = msg.role === 'user';
+    const isEditing = editingMessageId === index;
+    const wrapper   = document.createElement('div');
+    wrapper.className = `flex w-full ${isUser?'justify-end':'justify-start'} animate-fade-in group relative`;
+    const bubble = document.createElement('div');
+    bubble.className = `max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm relative ${isUser ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none'}`;
+    if (isEditing) {
+        bubble.innerHTML = `
+            <textarea id="edit-input-${index}" class="w-full bg-transparent border border-white/30 dark:border-slate-600 rounded p-2 focus:outline-none resize-y text-inherit" rows="3">${msg.text}</textarea>
+            <div class="flex justify-end gap-2 mt-2">
+                <button onclick="cancelEdit()" class="text-xs px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/40 text-red-100">Cancel</button>
+                <button onclick="submitEdit(${index})" class="text-xs px-2 py-1 rounded bg-green-500/20 hover:bg-green-500/40 text-green-100">Save</button>
+            </div>`;
+    } else {
+        let html = msg.image ? `<img src="${msg.image}" class="max-w-full h-auto rounded-lg mb-3 border border-white/20">` : "";
+        html += isUser
+            ? `<p class="whitespace-pre-wrap font-sans">${escapeHtml(msg.text)}</p>`
+            : `<div class="prose dark:prose-invert max-w-none text-sm md:text-base leading-relaxed">${marked.parse(msg.text)}</div>`;
+        bubble.innerHTML = html;
+    }
+    const actions = document.createElement('div');
+    actions.className = `msg-actions absolute -bottom-8 ${isUser?'right-0':'left-0'}`;
+    if (!isEditing) {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = `action-btn ${isUser?'text-slate-500 hover:text-blue-600':'text-slate-400 hover:text-slate-200'}`;
+        copyBtn.innerHTML = `<i class="fa-regular fa-copy"></i> Copy`;
+        copyBtn.onclick = () => copyToClipboard(msg.text, copyBtn);
+        actions.appendChild(copyBtn);
+        if (isUser) {
+            const editBtn = document.createElement('button');
+            editBtn.className = `action-btn text-slate-500 hover:text-blue-600`;
+            editBtn.innerHTML = `<i class="fa-solid fa-pen"></i>`;
+            editBtn.onclick = () => toggleEdit(index);
+            actions.appendChild(editBtn);
+            const delBtn = document.createElement('button');
+            delBtn.className = `action-btn text-red-400 hover:text-red-600`;
+            delBtn.innerHTML = `<i class="fa-solid fa-trash"></i>`;
+            delBtn.onclick = () => deleteMessage(index);
+            actions.appendChild(delBtn);
+        }
+    }
+    wrapper.appendChild(bubble);
+    wrapper.appendChild(actions);
+    container.appendChild(wrapper);
+    if (!isUser && !isEditing) addCodeBlockButtons(bubble);
+}
+
+function addCodeBlockButtons(element) {
+    element.querySelectorAll('pre').forEach(pre => {
+        if (pre.querySelector('.code-copy-btn')) return;
+        const btn = document.createElement('button');
+        btn.className = 'code-copy-btn';
+        btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+        btn.onclick = () => {
+            const code = pre.querySelector('code')?.innerText || pre.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+                setTimeout(() => btn.innerHTML = o, 2000);
+            });
+        };
+        pre.appendChild(btn);
+    });
+}
+
+function copyToClipboard(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+        const o = btn.innerHTML; btn.innerHTML = `<i class="fa-solid fa-check"></i> Copied!`;
+        setTimeout(() => btn.innerHTML = o, 2000);
+    });
+}
+
+// ======================================================================
+//  SEND MESSAGE
+// ======================================================================
+async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const text  = input.value.trim();
+    if (!text && !imagePayload) return;
+    if (!state.apiKey) { openSettings(); return; }
+    if (!state.currentChatId) createNewChat();
+
+    input.value = ''; input.style.height = 'auto';
+    document.getElementById('send-btn').disabled = true;
+    isGenerating = true;
+
+    const currentChat = state.chats.find(c => c.id === state.currentChatId);
+    const userMsg = { role:'user', text, image: imagePayload ? `data:${imagePayload.mime_type};base64,${imagePayload.data}` : null };
+    currentChat.messages.push(userMsg);
+    saveState(); loadChat(state.currentChatId);
+    const tmpImage = imagePayload; clearImage(); scrollToBottom();
+
+    // Streaming bubble
+    const container = document.getElementById('messages-container');
+    const aiWrapper = document.createElement('div');
+    aiWrapper.className = `flex w-full justify-start relative`;
+    aiWrapper.innerHTML = `<div class="max-w-[85%] md:max-w-[75%] rounded-2xl p-4 rounded-bl-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 shadow-sm"><div class="prose dark:prose-invert max-w-none text-sm md:text-base leading-relaxed typing-cursor"></div></div>`;
+    container.appendChild(aiWrapper);
+    const aiDiv = aiWrapper.querySelector('.prose');
+
+    let fullText = "", isError = false;
+
+    try {
+        // Context: last MAX_CONTEXT_MSGS (excluding just-added user msg)
+        const contents = [];
+        currentChat.messages.slice(0,-1).slice(-MAX_CONTEXT_MSGS).forEach(m => {
+            if (m.text && !m.text.startsWith("⚠️"))
+                contents.push({ role: m.role==='user'?'user':'model', parts:[{text:m.text}] });
+        });
+
+        const parts = [];
+        if (text)     parts.push({ text });
+        if (tmpImage) parts.push({ inline_data: tmpImage });
+        contents.push({ role:'user', parts });
+
+        // Semantic memory
+        const memory   = getSemanticMemoryContext(text);
+        const sysPrompt = (state.systemPrompt || "") + memory;
+
+        // Auto mid-chat background summarize (delayed to avoid racing with streaming)
+        if (currentChat.messages.length > MID_CHAT_THRESHOLD && !isSummarizing) {
+            const midChatId = state.currentChatId;
+            setTimeout(() => {
+                if (!isSummarizing && state.currentChatId === midChatId)
+                    triggerSummarize(midChatId);
+            }, 5000);
+        }
+
+        const body = {
+            contents,
+            generationConfig: { temperature:0.9, maxOutputTokens:8192, topP:0.95, topK:40 },
+            safetySettings: [
+                { category:"HARM_CATEGORY_HARASSMENT",        threshold:"BLOCK_ONLY_HIGH" },
+                { category:"HARM_CATEGORY_HATE_SPEECH",       threshold:"BLOCK_ONLY_HIGH" },
+                { category:"HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold:"BLOCK_ONLY_HIGH" },
+                { category:"HARM_CATEGORY_DANGEROUS_CONTENT", threshold:"BLOCK_ONLY_HIGH" }
+            ],
+            system_instruction: { parts:[{ text: sysPrompt }] }
+        };
+
+        let response, retry = 0;
+        while (retry < 3) {
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: 'You are a helpful assistant that extracts structured information from conversations. Respond only in valid JSON.' }] },
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 512 }
-          })
+                    { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }
+                );
+                if (response.status === 429) { retry++; await new Promise(r=>setTimeout(r,3000*retry)); continue; }
+                if (!response.ok) throw new Error((await response.json()).error?.message || "API Error");
+                break;
+            } catch(ne) { if (retry===2) throw ne; retry++; await new Promise(r=>setTimeout(r,2000)); }
         }
-      );
-      if (!res.ok) return null;
-      const data = await res.json();
-      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const cleaned = raw.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleaned);
-    } catch(e) {
-      console.warn('Summarize error:', e);
-      return null;
-    }
-  }
 
-  let _isSummarizing = false; // BUG-5 FIX: concurrency guard
+        const reader  = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, {stream:true});
+            const regex = /"text":\s*"((?:[^"\\]|\\.)*)"/g;
+            let m;
+            while ((m = regex.exec(chunk)) !== null) {
+                try { fullText += JSON.parse(`"${m[1]}"`); aiDiv.innerHTML = marked.parse(fullText); scrollToBottom(); } catch(e){}
+            }
+        }
+        if (!fullText.trim()) throw new Error("Empty or safety-blocked response");
 
-  async function summarizeActiveChat(manual = false) {
-    if (_isSummarizing) return; // prevent concurrent summarizations
-    // BUG-11 FIX: Capture chat reference immediately before any async operation
-    // (state.activeChatId may change after first await)
-    const chat = getActiveChat();
-    if (!chat || chat.messages.length < (manual ? 2 : 20)) return;
-    if (!state.apiKey || !state.selectedModel) return;
-    // Capture api credentials immediately too
-    const apiKey = state.apiKey;
-    const model = state.selectedModel;
-
-    // Check if already summarized recently
-    const lastSumTs = chat._lastSummarized || 0;
-    if (!manual && Date.now() - lastSumTs < 5 * 60 * 1000) return; // 5 min cooldown
-    console.log('[Memory] Summarizing chat:', chat.id);
-    _isSummarizing = true;
-    let result = null;
-    try {
-      result = await summarizeMessages(chat.messages, apiKey, model);
+    } catch(err) {
+        isError   = true;
+        fullText  = `⚠️ **Error:** _${err.message}_`;
+        aiDiv.innerHTML = marked.parse(fullText);
+        aiDiv.classList.add('text-red-500');
     } finally {
-      _isSummarizing = false;
-    }
-    if (!result) return;
-
-    const now = Date.now();
-    const tokens = tokenize((result.summary || '') + ' ' + (result.coreFacts || []).join(' '));
-    const tfidf = computeTFIDF(tokens);
-
-    // Store core facts in Core tier
-    if (result.coreFacts && result.coreFacts.length > 0) {
-      const coreMemories = loadTier(KEYS.CORE);
-      result.coreFacts.forEach(fact => {
-        const factLower = fact.toLowerCase();
-        // Avoid duplicates
-        const exists = coreMemories.some(m => m.summary.toLowerCase().includes(factLower.substring(0, 20)));
-        if (!exists) {
-          coreMemories.push({
-            id: 'core_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-            summary: fact,
-            chatId: chat.id,
-            createdAt: now,
-            lastRetrieved: now,
-            retrievalCount: 0,
-            tfidf: computeTFIDF(tokenize(fact))
-          });
+        aiDiv.classList.remove('typing-cursor');
+        document.getElementById('send-btn').disabled = false;
+        isGenerating = false;
+        aiWrapper.remove();
+        if (!isError) {
+            currentChat.messages.push({ role:'model', text:fullText });
+            if (currentChat.messages.length === 2 && currentChat.title === "New Chat")
+                currentChat.title = text.slice(0,40) + (text.length>40?'…':'');
+            saveState();
+            loadChat(state.currentChatId);
         }
-      });
-      saveTier(KEYS.CORE, coreMemories);
     }
-
-    // Store summary in Recent tier
-    if (result.summary) {
-      let recentMemories = loadTier(KEYS.RECENT);
-      recentMemories.push({
-        id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-        summary: result.summary,
-        chatId: chat.id,
-        chatTitle: chat.title,
-        createdAt: now,
-        lastRetrieved: now,
-        retrievalCount: 0,
-        tfidf
-      });
-
-      // Enforce MAX_RECENT: archive excess
-      if (recentMemories.length > MAX_RECENT) {
-        const toArchive = recentMemories.splice(0, recentMemories.length - MAX_RECENT);
-        archiveMemories(toArchive);
-      }
-      saveTier(KEYS.RECENT, recentMemories);
-    }
-
-    chat._lastSummarized = now;
-    saveState();
-    updateMemoryUI();
-
-    // Storage-aware pruning
-    const usage = getStorageUsage();
-    if (usage.ratio > STORAGE_PRUNE_THRESHOLD) {
-      pruneByRelevance();
-    }
-
-    if (manual) showGlobalStatus('✅ Chat summarized and saved to memory!', 'success');
-  }
-
-  // ---------- Archive (auto-compress) ----------
-  function archiveMemories(memories) {
-    let archive = loadTier(KEYS.ARCHIVE);
-    memories.forEach(m => {
-      // Compress: truncate to 120 chars
-      archive.push({
-        ...m,
-        summary: m.summary.substring(0, 120) + (m.summary.length > 120 ? '...' : ''),
-        tier: 'archive'
-      });
-    });
-    // Enforce MAX_ARCHIVE
-    if (archive.length > MAX_ARCHIVE) {
-      archive = archive.sort((a,b) => b.retrievalCount - a.retrievalCount).slice(0, MAX_ARCHIVE);
-    }
-    saveTier(KEYS.ARCHIVE, archive);
-  }
-
-  // ---------- 2. RETRIEVER (Vector Search) ----------
-  function retrieve(query, topK = 4) {
-    if (!query || query.trim().length < 3) return [];
-    const queryTokens = tokenize(query);
-    const queryVec = computeTFIDF(queryTokens);
-    const now = Date.now();
-    const all = getAll();
-
-    const scored = all.map(mem => ({
-      ...mem,
-      score: cosineSimilarity(queryVec, mem.tfidf || {})
-    })).filter(m => m.score > 0.02);
-
-    scored.sort((a, b) => {
-      // Boost core tier
-      const tierBoost = { core: 0.15, recent: 0.05, archive: 0 };
-      return (b.score + (tierBoost[b.tier]||0)) - (a.score + (tierBoost[a.tier]||0));
-    });
-
-    const top = scored.slice(0, topK);
-
-    // Update retrieval stats
-    top.forEach(mem => {
-      updateRetrievalStats(mem.id, mem.tier);
-    });
-
-    return top;
-  }
-
-  function updateRetrievalStats(id, tier) {
-    const key = tier === 'core' ? KEYS.CORE : tier === 'recent' ? KEYS.RECENT : KEYS.ARCHIVE;
-    const data = loadTier(key);
-    const mem = data.find(m => m.id === id);
-    if (mem) {
-      mem.retrievalCount = (mem.retrievalCount || 0) + 1;
-      mem.lastRetrieved = Date.now();
-      saveTier(key, data);
-    }
-  }
-
-  // ---------- 3. RESET RULES ----------
-  // Relevance-based Decay: prune least-retrieved
-  function pruneByRelevance() {
-    const now = Date.now();
-
-    // Recent: remove expired (90 days) + least-used if too many
-    let recent = loadTier(KEYS.RECENT);
-    recent = recent.filter(m => (now - m.createdAt) < RECENT_TTL);
-    if (recent.length > MAX_RECENT) {
-      // Sort by retrievalCount desc, keep top
-      recent.sort((a,b) => b.retrievalCount - a.retrievalCount);
-      const pruned = recent.splice(MAX_RECENT);
-      archiveMemories(pruned);
-    }
-    saveTier(KEYS.RECENT, recent);
-
-    // Archive: prune least-used
-    let archive = loadTier(KEYS.ARCHIVE);
-    if (archive.length > MAX_ARCHIVE) {
-      archive.sort((a,b) => b.retrievalCount - a.retrievalCount);
-      archive = archive.slice(0, MAX_ARCHIVE);
-    }
-    saveTier(KEYS.ARCHIVE, archive);
-
-    // Storage-aware: if still >80%, remove least-retrieved from recent+archive
-    const usage = getStorageUsage();
-    if (usage.ratio > STORAGE_PRUNE_THRESHOLD) {
-      let all = [...loadTier(KEYS.RECENT), ...loadTier(KEYS.ARCHIVE)]
-        .sort((a,b) => a.retrievalCount - b.retrievalCount);
-      const toRemove = Math.ceil(all.length * 0.2); // remove 20%
-      const removeIds = new Set(all.slice(0, toRemove).map(m => m.id));
-      ['RECENT','ARCHIVE'].forEach(t => {
-        const d = loadTier(KEYS[t]).filter(m => !removeIds.has(m.id));
-        saveTier(KEYS[t], d);
-      });
-    }
-
-    updateMemoryUI();
-  }
-
-  // ---------- 4. Memory Injection (Token-Optimized) ----------
-  async function buildMemoryContext(userMessage) {
-    const relevant = retrieve(userMessage, 5);
-    if (relevant.length === 0) return null;
-
-    // Compact format
-    const core = relevant.filter(m => m.tier === 'core');
-    const rest = relevant.filter(m => m.tier !== 'core');
-
-    let ctx = '[MEMORY CONTEXT - use this to personalize responses]\n';
-    if (core.length > 0) {
-      ctx += 'User facts: ' + core.map(m => m.summary).join(' | ') + '\n';
-    }
-    if (rest.length > 0) {
-      ctx += 'Relevant past: ' + rest.map(m => m.summary).join(' | ') + '\n';
-    }
-    ctx += '[END MEMORY]';
-    return { text: ctx, memories: relevant };
-  }
-
-  // ---------- UI Helpers ----------
-  function updateMemoryUI() {
-    const core = loadTier(KEYS.CORE);
-    const recent = loadTier(KEYS.RECENT);
-    const archive = loadTier(KEYS.ARCHIVE);
-    const total = core.length + recent.length + archive.length;
-
-    // Update stats
-    const sc = document.getElementById('statCore');
-    const sr = document.getElementById('statRecent');
-    const sa = document.getElementById('statArchive');
-    if (sc) sc.textContent = core.length;
-    if (sr) sr.textContent = recent.length;
-    if (sa) sa.textContent = archive.length;
-
-    // Header badge
-    const badge = document.getElementById('memStatusBadge');
-    if (badge) badge.style.display = total > 0 ? 'block' : 'none';
-
-    // Floating indicator
-    const ind = document.getElementById('memIndicator');
-    if (ind) ind.style.display = total > 0 ? 'block' : 'none';
-
-    // Storage bar
-    const usage = getStorageUsage();
-    const pct = Math.round(usage.ratio * 100);
-    const pctEl = document.getElementById('storagePercent');
-    const fillEl = document.getElementById('storageBarFill');
-    const detailEl = document.getElementById('storageDetail');
-    if (pctEl) pctEl.textContent = pct + '%';
-    if (fillEl) {
-      fillEl.style.width = pct + '%';
-      fillEl.className = 'storage-bar-fill' + (pct > 80 ? ' danger' : pct > 60 ? ' warn' : '');
-    }
-    if (detailEl) {
-      detailEl.textContent = `${(usage.used/1024).toFixed(1)} KB / ~5 MB used • ${total} memories`;
-    }
-
-    // Memory list
-    const listEl = document.getElementById('memoryList');
-    if (!listEl) return;
-    if (total === 0) {
-      listEl.innerHTML = '<div style="text-align:center; color:var(--text-tertiary); font-size:13px; padding:20px;">No memories yet. Start chatting!</div>';
-      return;
-    }
-    const all = [
-      ...core.map(m=>({...m,tier:'core'})),
-      ...recent.map(m=>({...m,tier:'recent'})),
-      ...archive.map(m=>({...m,tier:'archive'}))
-    ].sort((a,b) => b.retrievalCount - a.retrievalCount);
-
-    const tierLabel = { core: '🔒 Core', recent: '📅 Recent', archive: '📦 Archive' };
-    const tierColor = { core: '#34a853', recent: '#1a73e8', archive: '#9c27b0' };
-
-    listEl.innerHTML = all.map(m => `
-      <div class="mem-card ${m.tier}">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-          <span class="mem-badge ${m.tier}">${tierLabel[m.tier]}</span>
-          <div style="font-size:10px; color:var(--text-tertiary);">
-            Retrieved: ${m.retrievalCount}× • ${new Date(m.createdAt).toLocaleDateString()}
-          </div>
-        </div>
-        <div style="color:var(--text-primary);">${escHtml(m.summary)}</div>
-        ${m.chatTitle ? `<div style="font-size:10px; color:var(--text-tertiary); margin-top:3px;">From: ${escHtml(m.chatTitle)}</div>` : ''}
-        ${m.tier !== 'core' ? `<button onclick="Memory.deleteMemory(this.dataset.id, this.dataset.tier)" data-id="${escHtml(m.id)}" data-tier="${m.tier}" style="position:absolute; top:6px; right:6px; background:none; border:none; cursor:pointer; color:var(--text-tertiary); font-size:14px;" title="Delete">×</button>` : ''}
-      </div>
-    `).join('');
-  }
-
-  function deleteMemory(id, tier) {
-    if (!id || !tier) return;
-    const key = tier === 'core' ? KEYS.CORE : tier === 'recent' ? KEYS.RECENT : KEYS.ARCHIVE;
-    const data = loadTier(key).filter(m => m.id !== id);
-    saveTier(key, data);
-    updateMemoryUI();
-  }
-
-  function clearAll() {
-    if (!confirm('সব মেমরি মুছে ফেলবো? এটি পূর্বাবস্থায় ফেরানো যাবে না।')) return;
-    saveTier(KEYS.CORE, []);
-    saveTier(KEYS.RECENT, []);
-    saveTier(KEYS.ARCHIVE, []);
-    updateMemoryUI();
-    showGlobalStatus('All memories cleared.', 'success');
-  }
-
-  return {
-    retrieve,
-    summarizeActiveChat,
-    buildMemoryContext,
-    pruneByRelevance,
-    updateMemoryUI,
-    deleteMemory,
-    clearAll,
-    getStorageUsage,
-    loadTier,
-    KEYS
-  };
-})();
-
-// ================================================================
-// ============ MAIN APP ==========================================
-// ================================================================
-
-let state = {
-  apiKey: '', selectedModel: '', darkMode: false,
-  chats: [], activeChatId: null, sidebarOpen: false,
-  isStreaming: false, pendingImage: null, pendingImageMime: null,
-  sttActive: false
-};
-
-// ================================================================
-// ============ SYSTEM PROMPT =====================================
-// ================================================================
-const SYSTEM_PROMPT = `তুমি একজন অত্যন্ত বুদ্ধিমান, স্মার্ট এবং বন্ধুসুলভ এআই সহকারী। তোমার কথা বলার ধরন হবে কৌতুকপূর্ণ এবং চটপটে। তুমি কঠিন বিষয়গুলোকে খুব সহজ এবং মজাদার উদাহরণ দিয়ে ব্যাখ্যা করো। তোমার উত্তরে বুদ্ধির ছটা থাকবে। কোড দেওয়ার সময় পরিষ্কার ফরম্যাট ব্যবহার করবে এবং সংক্ষিপ্ত ব্যাখ্যা দেবে। ব্যবহারকারীর সাথে এমনভাবে কথা বলবে যেন তুমি একজন জ্ঞানী অথচ হাসি-খুশি বন্ধু। কার্যকরী উত্তর দাও।`;
-
-let recognition = null;
-const MAX_ACTIVE_MESSAGES = 20; // Token optimization: last 20 messages
-
-function getActiveChat() { return state.chats.find(c => c.id === state.activeChatId); }
-
-// ============ INIT ============
-function init() {
-  loadState();
-  applyDark();
-  renderChatList();
-  if (state.activeChatId) renderMessages();
-  else showWelcome();
-  updateModelLabel();
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  setupSTT();
-  setupMarked();
-  setupSelectionCopy();
-  Memory.updateMemoryUI();
-}
-function setupMarked() {
-  if (typeof marked !== 'undefined') {
-    try {
-      // marked v5+ uses marked.use(); older versions use setOptions
-      if (typeof marked.use === 'function') {
-        marked.use({ breaks: true, gfm: true });
-      } else {
-        marked.setOptions({ breaks: true, gfm: true });
-      }
-    } catch(e) { console.warn('marked setup error:', e); }
-  }
 }
 
-// ============ SELECTION COPY ============
-function setupSelectionCopy() {
-  const btn = document.getElementById('selectionCopyBtn');
-  document.addEventListener('mouseup', e => {
-    if (e.target === btn) return;
-    const sel = window.getSelection();
-    if (sel && sel.toString().trim().length > 0) {
-      const r = sel.getRangeAt(0).getBoundingClientRect();
-      btn.style.display = 'block';
-      let top = r.top + window.scrollY - 38;
-      let left = r.left + window.scrollX + r.width/2 - 36;
-      if (top < 4) top = r.bottom + window.scrollY + 6;
-      if (left < 4) left = 4;
-      btn.style.top = top + 'px'; btn.style.left = left + 'px';
-    } else btn.style.display = 'none';
-  });
-  document.addEventListener('mousedown', e => { if (e.target !== btn) btn.style.display = 'none'; });
-  document.addEventListener('selectionchange', () => {
-    const sel = window.getSelection();
-    if (!sel || sel.toString().trim().length === 0) btn.style.display = 'none';
-  });
-}
-function copySelectedText() {
-  const text = window.getSelection().toString();
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('selectionCopyBtn');
-    btn.textContent = '✓ Copied!';
-    setTimeout(() => { btn.textContent = '📋 Copy'; btn.style.display = 'none'; window.getSelection().removeAllRanges(); }, 1200);
-  });
-}
-window.copySelectedText = copySelectedText;
-
-// ============ PERSISTENCE ============
-function loadState() {
-  try {
-    state.apiKey = localStorage.getItem('JoyBOT_apiKey') || '';
-    state.selectedModel = localStorage.getItem('JoyBOT_model') || '';
-    state.darkMode = localStorage.getItem('JoyBOT_dark') === 'true';
-    const chats = localStorage.getItem('JoyBOT_chats');
-    if (chats) state.chats = JSON.parse(chats);
-    state.activeChatId = localStorage.getItem('JoyBOT_activeChat') || null;
-    if (state.activeChatId && !state.chats.find(c => c.id === state.activeChatId)) state.activeChatId = null;
-  } catch(e) { console.error('Load state error:', e); }
-}
-function saveState() {
-  try {
-    // BUG-1 FIX: Strip _editing flag before serializing (prevents corrupted UI on reload)
-    const chatsClean = state.chats.map(chat => ({
-      ...chat,
-      messages: chat.messages.map(m => {
-        const { _editing, ...clean } = m;
-        return clean;
-      })
-    }));
-    localStorage.setItem('JoyBOT_apiKey', state.apiKey);
-    localStorage.setItem('JoyBOT_model', state.selectedModel);
-    localStorage.setItem('JoyBOT_dark', state.darkMode);
-    localStorage.setItem('JoyBOT_chats', JSON.stringify(chatsClean));
-    localStorage.setItem('JoyBOT_activeChat', state.activeChatId || '');
-  } catch(e) {
-    if (e.name === 'QuotaExceededError') {
-      // Auto-trigger memory pruning when storage is full
-      console.warn('[JoyBOT] localStorage full — triggering memory prune');
-      Memory.pruneByRelevance();
-      // Try saving with only last 10 chats as emergency fallback
-      try {
-        const trimmed = state.chats.slice(0, 10).map(chat => ({
-          ...chat,
-          messages: chat.messages.slice(-30).map(m => { const {_editing,...c}=m; return c; })
-        }));
-        localStorage.setItem('JoyBOT_chats', JSON.stringify(trimmed));
-      } catch(e2) { console.error('Critical: Cannot save state even after pruning', e2); }
-    } else {
-      console.error('Save state error:', e);
-    }
-  }
-}
-
-// ============ MEMORY PANEL ============
-function openMemoryPanel() {
-  Memory.updateMemoryUI();
-  document.getElementById('memoryModal').style.display = 'flex';
-  closeSidebarMobile();
-}
-function closeMemoryPanel() { document.getElementById('memoryModal').style.display = 'none'; }
-function clearAllMemory() { Memory.clearAll(); }
-window.openMemoryPanel = openMemoryPanel;
-window.closeMemoryPanel = closeMemoryPanel;
-window.clearAllMemory = clearAllMemory;
-window.Memory = Memory;
-
-function showGlobalStatus(msg, type) {
-  const toast = document.createElement('div');
-  toast.style.cssText = `position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:${type==='success'?'#1e8e3e':'#c5221f'}; color:#fff; padding:8px 20px; border-radius:20px; font-size:13px; z-index:9999; box-shadow:0 4px 12px rgba(0,0,0,0.3);`;
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
-
-// ============ DELETE ALL ============
-function deleteAllData() {
-  if (!confirm('সমস্ত চ্যাট ইতিহাস এবং ডেটা মুছে ফেলবো? এটি পূর্বাবস্থায় ফেরানো যাবে না।')) return;
-  state.chats = []; state.activeChatId = null;
-  localStorage.removeItem('JoyBOT_chats'); localStorage.removeItem('JoyBOT_activeChat');
-  saveState(); renderChatList(); showWelcome(); closeSettings();
-  showGlobalStatus('All data deleted.', 'success');
-}
-window.deleteAllData = deleteAllData;
-
-// ============ DARK MODE ============
-function toggleDark() { state.darkMode = !state.darkMode; applyDark(); saveState(); }
-window.toggleDark = toggleDark;
-function applyDark() {
-  document.documentElement.classList.toggle('dark', state.darkMode);
-  const label = document.getElementById('darkLabel'), icon = document.getElementById('darkIcon');
-  if (state.darkMode) {
-    label.textContent = 'Light Mode';
-    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-  } else {
-    label.textContent = 'Dark Mode';
-    icon.innerHTML = '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
-  }
-}
-
-// ============ SIDEBAR ============
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
-  if (window.innerWidth >= 768) { sidebar.classList.toggle('collapsed'); }
-  else { state.sidebarOpen = !state.sidebarOpen; sidebar.classList.toggle('open', state.sidebarOpen); overlay.classList.toggle('active', state.sidebarOpen); }
-}
-window.toggleSidebar = toggleSidebar;
-function closeSidebarMobile() {
-  if (window.innerWidth < 768) {
-    state.sidebarOpen = false;
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebarOverlay').classList.remove('active');
-  }
-}
-
-// ============ CHAT MANAGEMENT ============
-function newChat() {
-  // Auto-summarize previous chat before switching
-  if (state.activeChatId) { Memory.summarizeActiveChat(false); }
-  const chat = { id: 'chat_' + Date.now(), title: 'New Chat', messages: [], context: [] };
-  state.chats.unshift(chat);
-  state.activeChatId = chat.id;
-  saveState(); renderChatList(); showWelcome(); closeSidebarMobile();
-  document.getElementById('chatTitle').textContent = 'JoyBOT';
-  clearImage();
-}
-window.newChat = newChat;
-
-function switchChat(id) {
-  if (state.isStreaming) return;
-  // Auto-summarize current chat
-  if (state.activeChatId && state.activeChatId !== id) Memory.summarizeActiveChat(false);
-  state.activeChatId = id;
-  saveState(); renderChatList(); renderMessages(); closeSidebarMobile(); clearImage(); stopTTS();
-}
-window.switchChat = switchChat;
-
-function deleteChat(id, e) {
-  e.stopPropagation();
-  if (!confirm('এই চ্যাটটি মুছে ফেলবো?')) return;
-  state.chats = state.chats.filter(c => c.id !== id);
-  if (state.activeChatId === id) state.activeChatId = state.chats.length > 0 ? state.chats[0].id : null;
-  saveState(); renderChatList();
-  if (state.activeChatId) renderMessages(); else showWelcome();
-}
-window.deleteChat = deleteChat;
-
-let renamingChatId = null;
-function renameChat(id, e) {
-  e.stopPropagation(); renamingChatId = id;
-  const chat = state.chats.find(c => c.id === id);
-  document.getElementById('renameInput').value = chat ? chat.title : '';
-  document.getElementById('renameModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('renameInput').focus(), 100);
-}
-window.renameChat = renameChat;
-function confirmRename() {
-  const name = document.getElementById('renameInput').value.trim();
-  if (name && renamingChatId) { const chat = state.chats.find(c => c.id === renamingChatId); if (chat) { chat.title = name; saveState(); renderChatList(); } }
-  closeRename();
-}
-window.confirmRename = confirmRename;
-function closeRename() { document.getElementById('renameModal').style.display = 'none'; renamingChatId = null; }
-window.closeRename = closeRename;
-
-function renderChatList() {
-  const list = document.getElementById('chatList');
-  if (state.chats.length === 0) { list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-tertiary); font-size:13px;">No chats yet</div>'; return; }
-  list.innerHTML = state.chats.map(c => `
-    <div class="chat-item ${c.id === state.activeChatId ? 'active' : ''}" onclick="switchChat('${c.id}')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(c.title)}</span>
-      <div class="actions">
-        <button class="icon-btn" onclick="renameChat('${c.id}',event)" title="Rename" style="padding:4px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="icon-btn" onclick="deleteChat('${c.id}',event)" title="Delete" style="padding:4px; color:var(--danger);">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-// ============ MESSAGES ============
-function showWelcome() {
-  const el = document.getElementById('messages');
-  el.innerHTML = `
-    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; padding:20px; text-align:center;">
-      <div style="margin-bottom:16px;"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
-      <h1 style="font-size:28px; font-weight:700; margin-bottom:4px; color:var(--text-primary);">Hi Joy</h1>
-      <p style="color:var(--text-secondary); font-size:16px; margin-bottom:28px;">Ready to chat with JoyBOT?</p>
-      <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; width:100%; max-width:560px;">
-        <div class="welcome-card" onclick="quickPrompt('Explain quantum computing in simple terms')"><div style="font-weight:600; margin-bottom:4px; color:var(--text-primary);">💡 Explain</div>Quantum computing in simple terms</div>
-        <div class="welcome-card" onclick="quickPrompt('Write a Python function to reverse a linked list')"><div style="font-weight:600; margin-bottom:4px; color:var(--text-primary);">💻 Code</div>Python linked list reversal</div>
-        <div class="welcome-card" onclick="quickPrompt('Give me 5 creative business ideas for 2025')"><div style="font-weight:600; margin-bottom:4px; color:var(--text-primary);">🚀 Brainstorm</div>Creative business ideas</div>
-        <div class="welcome-card" onclick="quickPrompt('/imagine A futuristic city at sunset with flying cars')"><div style="font-weight:600; margin-bottom:4px; color:var(--text-primary);">🎨 Imagine</div>Generate an AI image</div>
-      </div>
-    </div>`;
-  document.getElementById('chatTitle').textContent = 'JoyBOT';
-}
-function quickPrompt(text) { document.getElementById('chatInput').value = text; autoResize(document.getElementById('chatInput')); sendMessage(); }
-window.quickPrompt = quickPrompt;
-
-function renderMessages() {
-  const chat = getActiveChat();
-  if (!chat) { showWelcome(); return; }
-  document.getElementById('chatTitle').textContent = chat.title;
-  const el = document.getElementById('messages');
-  if (chat.messages.length === 0) { showWelcome(); return; }
-  el.innerHTML = chat.messages.map((m, i) => renderMessageBubble(m, i)).join('');
-  addCodeCopyButtons(); scrollToBottom();
-}
-
-// BUG-8 FIX: Null safety + message index validation
-function renderMessageBubble(msg, index) {
-  if (!msg) return '';
-  const isUser = msg.role === 'user';
-  let content = '';
-  if (msg.image) content += `<img src="${msg.image}" class="img-in-chat" onclick="showLightbox(this.src)" alt="uploaded image">`;
-  if (msg.generatedImage) content += `<img src="data:image/png;base64,${msg.generatedImage}" class="gen-img-chat" onclick="showLightbox(this.src)" alt="generated image">`;
-  if (msg.text) {
-    if (isUser) {
-      if (msg._editing) {
-        content += `<textarea class="edit-textarea" id="editArea_${index}" rows="3">${escHtml(msg.text)}</textarea>
-          <div style="display:flex; gap:6px; margin-top:6px; justify-content:flex-end;">
-            <button class="btn-secondary" style="font-size:12px; padding:4px 10px;" onclick="cancelEdit(${index})">Cancel</button>
-            <button class="btn-primary" style="font-size:12px; padding:4px 10px;" onclick="saveEdit(${index})">Save</button>
-          </div>`;
-      } else {
-        content += `<div style="white-space:pre-wrap;">${escHtml(msg.text)}</div>`;
-      }
-    } else {
-      content += `<div class="msg-content">${renderMarkdown(msg.text)}</div>`;
-    }
-  }
-  if (msg.error) content += `<div style="color:var(--danger); font-size:13px; margin-top:4px;">⚠️ ${escHtml(msg.error)}</div>`;
-  const ttsBtn = !isUser && msg.text ? `<button class="icon-btn" onclick="speakText(${index})" title="Read aloud" style="padding:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg></button>` : '';
-  let actionButtons = '';
-  if (isUser) {
-    actionButtons = `<div class="msg-actions" style="justify-content:flex-end;">
-      <button class="msg-action-btn" onclick="copyMessage(${index})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
-      <button class="msg-action-btn" onclick="editMessage(${index})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</button>
-      <button class="msg-action-btn danger" onclick="deleteMessage(${index})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Delete</button>
-    </div>`;
-  } else if (msg.text) {
-    actionButtons = `<div class="msg-actions" style="justify-content:flex-start; margin-top:4px;">
-      <button class="msg-action-btn" onclick="copyMessage(${index})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
-    </div>`;
-  }
-  return `<div class="msg-wrapper animate-fade-in" style="display:flex; flex-direction:column; ${isUser?'align-items:flex-end':'align-items:flex-start'}; margin-bottom:16px;">
-    <div style="max-width:85%; ${isUser?'background:var(--user-bubble); border-radius:20px 20px 4px 20px; padding:12px 16px;':'padding:4px 0;'}">
-      ${!isUser ? '<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span style="font-size:13px; font-weight:600; color:var(--accent);">JoyBOT</span>' + ttsBtn + '</div>' : ''}
-      ${content}
-    </div>
-    ${actionButtons}
-  </div>`;
-}
-
-// BUG-2 FIX: Visual feedback on copy
-function copyMessage(i) {
-  const c = getActiveChat();
-  if (!c || !c.messages[i]) return;
-  const text = c.messages[i].text || '';
-  navigator.clipboard.writeText(text).then(() => {
-    // Show toast feedback
-    showGlobalStatus('✓ কপি হয়েছে!', 'success');
-  }).catch(() => {
-    // Fallback for older browsers
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showGlobalStatus('✓ কপি হয়েছে!', 'success');
-  });
-}
-window.copyMessage = copyMessage;
-function editMessage(i) { const c = getActiveChat(); if (!c || !c.messages[i]) return; c.messages[i]._editing = true; renderMessages(); const a = document.getElementById('editArea_'+i); if(a){a.focus();a.select();} }
-window.editMessage = editMessage;
-function cancelEdit(i) { const c = getActiveChat(); if(!c||!c.messages[i])return; delete c.messages[i]._editing; renderMessages(); }
-window.cancelEdit = cancelEdit;
-// BUG-7 FIX: saveEdit — don't try to match context by index (context may have memory injection prepended)
-function saveEdit(i) {
-  const c = getActiveChat();
-  if(!c || !c.messages[i]) return;
-  const a = document.getElementById('editArea_'+i);
-  if(a) {
-    const newText = a.value;
-    c.messages[i].text = newText;
-    // Rebuild context from messages instead of index-matching
-    // (context indices differ from message indices after memory injection)
-    rebuildContextFromMessages(c);
-  }
-  delete c.messages[i]._editing;
-  saveState(); renderMessages();
-}
-window.saveEdit = saveEdit;
-// BUG-6 FIX: deleteMessage — don't try to sync context by index
-function deleteMessage(i) {
-  const c = getActiveChat();
-  if(!c || !c.messages[i]) return;
-  if(!confirm('এই মেসেজটি মুছবো?')) return;
-  c.messages.splice(i, 1);
-  // Rebuild context from remaining messages
-  rebuildContextFromMessages(c);
-  saveState(); renderMessages();
-}
-window.deleteMessage = deleteMessage;
-// Helper: rebuild context array from messages (strips memory injection, rebuilds clean)
-function rebuildContextFromMessages(chat) {
-  chat.context = chat.messages
-    .filter(m => m.text || m.image)
-    .map(m => {
-      const parts = [];
-      if (m.text) parts.push({ text: m.text });
-      if (m.image) {
-        // Null-safe base64 extraction from data URL
-        const commaIdx = m.image.indexOf(',');
-        const b64 = commaIdx !== -1 ? m.image.slice(commaIdx + 1) : null;
-        const mime = m.image.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
-        if (b64) parts.push({ inline_data: { mime_type: mime, data: b64 } });
-      }
-      if (parts.length === 0) return null; // skip empty
-      return { role: m.role === 'user' ? 'user' : 'model', parts };
-    })
-    .filter(Boolean); // remove nulls
-}
-function renderMarkdown(text) {
-  if (!text) return '';
-  if (typeof marked !== 'undefined') {
-    try { return marked.parse(text); } catch(e) { console.warn('Markdown parse error:', e); }
-  }
-  return escHtml(text).replace(/\n/g, '<br>');
-}
-function addCodeCopyButtons() {
-  document.querySelectorAll('.msg-content pre').forEach(pre => {
-    if (!pre || pre.querySelector('.copy-btn')) return;
-    const btn = document.createElement('button');
-    btn.className = 'copy-btn';
-    btn.textContent = 'Copy';
-    btn.onclick = (e) => {
-      e.stopPropagation();
-      const code = pre.querySelector('code')?.textContent ?? pre.innerText ?? '';
-      navigator.clipboard.writeText(code).then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 1500);
-      }).catch(() => {
-        // Fallback
-        const ta = document.createElement('textarea');
-        ta.value = code; document.body.appendChild(ta); ta.select();
-        document.execCommand('copy'); document.body.removeChild(ta);
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 1500);
-      });
+// ======================================================================
+//  IMAGE
+// ======================================================================
+function handleImageUpload(event) {
+    const file = event.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const raw = e.target.result, split = raw.split(',');
+        imagePayload = { mime_type: split[0].match(/:(.*?);/)[1], data: split[1] };
+        document.getElementById('image-preview').src = raw;
+        document.getElementById('image-preview-container').classList.remove('hidden');
     };
-    pre.appendChild(btn);
-  });
+    reader.readAsDataURL(file);
 }
-function scrollToBottom() {
-  const c = document.getElementById('messagesContainer');
-  if (!c) return;
-  // Use requestAnimationFrame for smooth, performant scroll
-  requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
-}
-function showLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').style.display = 'flex'; }
-window.showLightbox = showLightbox;
-
-// ============ IMAGE UPLOAD ============
-function handleImageSelect(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => { state.pendingImage = ev.target.result; state.pendingImageMime = file.type; document.getElementById('previewImg').src = ev.target.result; document.getElementById('imagePreview').style.display = 'block'; };
-  reader.readAsDataURL(file);
-}
-window.handleImageSelect = handleImageSelect;
-function clearImage() { state.pendingImage = null; state.pendingImageMime = null; document.getElementById('imagePreview').style.display = 'none'; document.getElementById('fileInput').value = ''; }
-window.clearImage = clearImage;
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-window.autoResize = autoResize;
-function handleInputKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
-window.handleInputKey = handleInputKey;
-
-// ============ SEND MESSAGE (with Memory Injection) ============
-async function sendMessage() {
-  if (state.isStreaming) return;
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if (!text && !state.pendingImage) return;
-  if (!state.apiKey) { alert('Please set your API key in Settings first.'); openSettings(); return; }
-  if (!state.selectedModel) { alert('Please select a model in Settings first.'); openSettings(); return; }
-
-  const isImageGen = text.toLowerCase().startsWith('/imagine');
-  const imagePrompt = isImageGen ? text.replace(/^\/imagine\s*/i,'').trim() : null;
-
-  if (!state.activeChatId) newChat();
-  const chat = getActiveChat(); if (!chat) return;
-  if (chat.messages.length === 0) chat.title = text.substring(0,40) || 'Image Chat';
-
-  const userMsg = { role: 'user', text: text || '' };
-  if (state.pendingImage) userMsg.image = state.pendingImage;
-  chat.messages.push(userMsg);
-
-  const userParts = [];
-  if (text) userParts.push({ text });
-  if (state.pendingImage) { const b64 = state.pendingImage.split(',')[1]; userParts.push({ inline_data: { mime_type: state.pendingImageMime, data: b64 } }); }
-  if (!chat.context) chat.context = [];
-  chat.context.push({ role: 'user', parts: userParts });
-
-  input.value = ''; input.style.height = 'auto';
-  clearImage(); saveState(); renderMessages();
-
-  // ===== MEMORY: Retrieve relevant context =====
-  let memCtx = null;
-  if (text && text.length > 3) {
-    showMemInjectionBar('🔍 Searching memory...');
-    try {
-      memCtx = await Memory.buildMemoryContext(text);
-      if (memCtx && memCtx.memories.length > 0) {
-        showMemInjectionBar(`🧠 Injecting ${memCtx.memories.length} relevant memor${memCtx.memories.length>1?'ies':'y'}...`);
-      } else {
-        hideMemInjectionBar();
-      }
-    } catch(e) {
-      console.warn('[Memory] Retrieval failed:', e);
-      hideMemInjectionBar();
-      memCtx = null;
-    }
-  }
-
-  if (isImageGen && imagePrompt) {
-    await generateImage(chat, imagePrompt);
-  } else {
-    await streamResponse(chat, memCtx);
-  }
-
-  // Auto-summarize every 20 user messages
-  const userMsgCount = chat.messages.filter(m => m.role === 'user').length;
-  if (userMsgCount > 0 && userMsgCount % 20 === 0) {
-    setTimeout(() => Memory.summarizeActiveChat(false), 1000);
-  }
-}
-window.sendMessage = sendMessage;
-
-function showMemInjectionBar(txt) {
-  const bar = document.getElementById('memInjectionBar');
-  const textEl = document.getElementById('memInjectionText');
-  if (bar) bar.style.display = 'flex';
-  if (textEl) textEl.textContent = txt;
-}
-function hideMemInjectionBar() {
-  const bar = document.getElementById('memInjectionBar');
-  if (bar) bar.style.display = 'none';
+function clearImage() {
+    imagePayload = null;
+    document.getElementById('image-upload').value = "";
+    document.getElementById('image-preview-container').classList.add('hidden');
 }
 
-// ============ IMAGE GENERATION ============
-async function generateImage(chat, prompt) {
-  state.isStreaming = true;
-  hideMemInjectionBar();
-  const aiMsg = { role: 'model', text: '🎨 Generating image...' };
-  chat.messages.push(aiMsg); renderMessages();
-  try {
-    const imagenModels = ['imagen-3.0-generate-002','imagen-3.0-generate-001'];
-    let success = false;
-    for (const model of imagenModels) {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${state.apiKey}`,
-          { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} }) });
-        if (res.ok) { const data = await res.json(); if (data.predictions?.[0]) { aiMsg.text = `🎨 Generated: "${prompt}"`; aiMsg.generatedImage = data.predictions[0].bytesBase64Encoded; success = true; break; } }
-      } catch(e) { continue; }
-    }
-    if (!success) {
-      aiMsg.text = '';
-      // Safe fallback context: only use existing context, not undefined
-      const ctxSlice = (chat.context || []).slice(-MAX_ACTIVE_MESSAGES * 2);
-      const fallbackCtx = ctxSlice.length > 0
-        ? [...ctxSlice.slice(0, -1), { role:'user', parts:[{text:`Describe what this image would look like: "${prompt}"`}] }]
-        : [{ role:'user', parts:[{text:`Describe what this image would look like: "${prompt}"`}] }];
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${state.selectedModel}:streamGenerateContent?key=${state.apiKey}&alt=sse`,
-        { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: fallbackCtx, safetySettings: getSafetySettings() }) });
-      if (res.ok) await processStream(res, aiMsg, chat);
-      else aiMsg.error = `Image generation failed (${res.status})`;
-    }
-    chat.context.push({ role:'model', parts:[{text: aiMsg.text||'Image generated.'}] });
-  } catch(e) {
-    aiMsg.text = '';
-    aiMsg.error = 'Image generation error: ' + e.message;
-    console.error('[generateImage]', e);
-  } finally {
-    // BUG FIX: Always reset isStreaming even if exception escapes catch
-    state.isStreaming = false;
-    saveState();
-    renderMessages();
-  }
-}
-
-// ============ STREAMING RESPONSE (with Memory Context) ============
-async function streamResponse(chat, memCtx) {
-  state.isStreaming = true;
-  const aiMsg = { role:'model', text:'' };
-  chat.messages.push(aiMsg);
-
-  // Token optimization: last 20 messages only
-  let contextMessages = (chat.context||[]).slice(-MAX_ACTIVE_MESSAGES*2);
-
-  // Inject memory as system-level context at the start
-  if (memCtx && memCtx.text) {
-    contextMessages = [
-      { role: 'user', parts: [{ text: memCtx.text }] },
-      { role: 'model', parts: [{ text: 'I have noted this context and will use it to personalize my responses.' }] },
-      ...contextMessages
-    ];
-  }
-
-  const body = {
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: contextMessages,
-    safetySettings: getSafetySettings(),
-    generationConfig: { temperature: 0.9, topK: 40, topP: 0.95, maxOutputTokens: 8192 }
-  };
-
-  try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${state.selectedModel}:streamGenerateContent?key=${state.apiKey}&alt=sse`,
-      { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }
-    );
-    hideMemInjectionBar();
-    if (!res.ok) {
-      const errData = await res.json().catch(()=>null);
-      aiMsg.error = errData?.error?.message || `API Error (${res.status})`;
-      chat.context.push({ role:'model', parts:[{text:'Error occurred.'}] });
-      return; // finally will still run
-    }
-    await processStream(res, aiMsg, chat);
-    chat.context.push({ role:'model', parts:[{text: aiMsg.text||''}] });
-  } catch(e) {
-    aiMsg.error = 'Network error: ' + e.message;
-    console.error('[streamResponse]', e);
-  } finally {
-    hideMemInjectionBar();
-    state.isStreaming = false;
-    saveState();
-    renderMessages();
-  }
-}
-
-async function processStream(res, aiMsg, chat) {
-  const reader = res.body.getReader(), decoder = new TextDecoder();
-  let buffer = '';
-  renderMessages();
-  const messagesEl = document.getElementById('messages');
-
-  // BUG-4 FIX: Use unique ID to prevent duplicate id="streamContent" conflicts
-  const streamId = 'sc_' + Date.now();
-  const streamDiv = document.createElement('div');
-  streamDiv.className = 'msg-wrapper animate-fade-in';
-  streamDiv.style.cssText = 'display:flex; flex-direction:column; align-items:flex-start; margin-bottom:16px;';
-  streamDiv.innerHTML = `<div style="max-width:85%; padding:4px 0;"><div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><span style="font-size:13px; font-weight:600; color:var(--accent);">JoyBOT</span></div><div class="msg-content cursor-blink" id="${streamId}"></div></div>`;
-  messagesEl.appendChild(streamDiv);
-  scrollToBottom();
-  const sc = document.getElementById(streamId);
-  if (!sc) return;
-
-  // BUG-14 FIX: Throttle scroll during streaming (max once per 150ms)
-  let lastScroll = 0;
-  const throttledScroll = () => {
-    const now = Date.now();
-    if (now - lastScroll > 150) { lastScroll = now; scrollToBottom(); }
-  };
-
-  while (true) {
-    const { done, value } = await reader.read(); if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n'); buffer = lines.pop() || '';
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue;
-      const jsonStr = line.slice(6).trim();
-      if (!jsonStr || jsonStr === '[DONE]') continue;
-      try {
-        const chunk = JSON.parse(jsonStr);
-        const t = chunk?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (t) {
-          aiMsg.text += t;
-          sc.innerHTML = renderMarkdown(aiMsg.text);
-          addCodeCopyButtons();
-          throttledScroll();
-        }
-      } catch(e) {}
-    }
-  }
-  // Final scroll
-  scrollToBottom();
-  if (buffer.startsWith('data: ')) {
-    const j = buffer.slice(6).trim();
-    if (j && j !== '[DONE]') {
-      try { const c2 = JSON.parse(j); const t = c2?.candidates?.[0]?.content?.parts?.[0]?.text; if(t) aiMsg.text += t; } catch(e) {}
-    }
-  }
-}
-
-function getSafetySettings() {
-  return ['HARM_CATEGORY_HARASSMENT','HARM_CATEGORY_HATE_SPEECH','HARM_CATEGORY_SEXUALLY_EXPLICIT','HARM_CATEGORY_DANGEROUS_CONTENT']
-    .map(c => ({ category: c, threshold: 'BLOCK_NONE' }));
-}
-
-// ============ SETTINGS ============
-function openSettings() {
-  document.getElementById('apiKeyInput').value = state.apiKey;
-  const sel = document.getElementById('modelSelect');
-  if (state.selectedModel && !sel.querySelector(`option[value="${state.selectedModel}"]`)) { const opt = document.createElement('option'); opt.value = state.selectedModel; opt.textContent = state.selectedModel; sel.appendChild(opt); }
-  sel.value = state.selectedModel;
-  document.getElementById('settingsStatus').innerHTML = '';
-  document.getElementById('settingsModal').style.display = 'flex';
-  closeSidebarMobile();
-}
-window.openSettings = openSettings;
-function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
-window.closeSettings = closeSettings;
-function saveSettings() {
-  state.apiKey = document.getElementById('apiKeyInput').value.trim();
-  state.selectedModel = document.getElementById('modelSelect').value;
-  saveState(); updateModelLabel();
-  showStatus('settingsStatus', 'Settings saved!', 'success');
-  setTimeout(closeSettings, 800);
-}
-window.saveSettings = saveSettings;
-async function fetchModels() {
-  const key = document.getElementById('apiKeyInput').value.trim();
-  if (!key) { showStatus('settingsStatus', 'Please enter an API key first.', 'error'); return; }
-  const btn = document.getElementById('fetchModelsBtn'); btn.disabled = true; btn.textContent = 'Fetching...';
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-    if (!res.ok) { const err = await res.json().catch(()=>null); throw new Error(err?.error?.message||`HTTP ${res.status}`); }
-    const data = await res.json();
-    const models = (data.models||[]).filter(m => m.supportedGenerationMethods?.includes('generateContent')).map(m => ({ id: m.name.replace('models/',''), name: m.displayName||m.name.replace('models/','') }));
-    const sel = document.getElementById('modelSelect');
-    sel.innerHTML = '<option value="">-- Select a model --</option>';
-    models.forEach(m => { const opt = document.createElement('option'); opt.value = m.id; opt.textContent = m.name+' ('+m.id+')'; sel.appendChild(opt); });
-    if (state.selectedModel) sel.value = state.selectedModel;
-    showStatus('settingsStatus', `Found ${models.length} models!`, 'success');
-  } catch(e) { showStatus('settingsStatus', 'Error: ' + e.message, 'error'); }
-  btn.disabled = false; btn.textContent = 'Fetch Models';
-}
-window.fetchModels = fetchModels;
-function showStatus(elId, msg, type) { const el = document.getElementById(elId); el.innerHTML = `<div class="status-msg status-${type}">${escHtml(msg)}</div>`; setTimeout(()=>{ if(el) el.innerHTML=''; },5000); }
-function updateModelLabel() { document.getElementById('modelLabel').textContent = state.selectedModel || 'No model selected'; }
-
-// ============ STT ============
-function setupSTT() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { document.getElementById('micBtn').style.display='none'; return; }
-  recognition = new SR(); recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
-  recognition.onresult = e => { let t=''; for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript; const inp=document.getElementById('chatInput'); if(!inp._sttBase) inp._sttBase=inp.value; inp.value=inp._sttBase+t; autoResize(inp); };
-  recognition.onend = () => { if(state.sttActive){try{recognition.start();}catch(e){}} else { const inp=document.getElementById('chatInput'); delete inp._sttBase; document.getElementById('micBtn').classList.remove('listening-pulse'); } };
-  recognition.onerror = e => { state.sttActive=false; document.getElementById('micBtn').classList.remove('listening-pulse'); delete document.getElementById('chatInput')._sttBase; if(e.error==='not-allowed') alert('Microphone access denied.'); };
-}
-function toggleSTT() {
-  if (!recognition) { alert('Speech recognition not supported.'); return; }
-  if (state.sttActive) { state.sttActive=false; recognition.stop(); document.getElementById('micBtn').classList.remove('listening-pulse'); }
-  else { state.sttActive=true; document.getElementById('chatInput')._sttBase=document.getElementById('chatInput').value; document.getElementById('micBtn').classList.add('listening-pulse'); try{recognition.start();}catch(e){recognition.stop();setTimeout(()=>{try{recognition.start();}catch(ex){}},100);} }
-}
-window.toggleSTT = toggleSTT;
-
-// ============ TTS ============
-function speakText(idx) {
-  const chat = getActiveChat(); if(!chat||!chat.messages[idx]) return;
-  if(window.speechSynthesis.speaking){window.speechSynthesis.cancel();return;}
-  const text = chat.messages[idx].text; if(!text) return;
-  const clean = text.replace(/```[\s\S]*?```/g,'code block').replace(/`[^`]+`/g,'').replace(/\*\*([^*]+)\*\*/g,'$1').replace(/\*([^*]+)\*/g,'$1').replace(/#{1,6}\s/g,'').replace(/[*_~`#]/g,'').trim();
-  const u = new SpeechSynthesisUtterance(clean); u.rate=1; u.pitch=1; u.volume=1; window.speechSynthesis.speak(u);
-}
-window.speakText = speakText;
-function stopTTS() { if(window.speechSynthesis?.speaking) window.speechSynthesis.cancel(); }
-
-// ============ HELPERS ============
-function escHtml(str) { if(!str)return''; const d=document.createElement('div'); d.textContent=str; return d.innerHTML; }
-
-// ============ BOOT ============
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-else init();
-
-let vv = window.visualViewport;
-if (vv) {
-  vv.addEventListener('resize', ()=>document.getElementById('app').style.height=vv.height+'px');
-  vv.addEventListener('scroll', ()=>document.getElementById('app').style.height=vv.height+'px');
-}
-window.addEventListener('resize', ()=>{ if(window.innerWidth>=768){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); state.sidebarOpen=false; } });
-
-// STT cleanup: stop recognition on page unload to release mic
-window.addEventListener('beforeunload', () => {
-  if (recognition && state.sttActive) {
-    try { recognition.stop(); } catch(e) {}
-  }
-  if (window.speechSynthesis) window.speechSynthesis.cancel();
-});
-
-// Global error boundary: catch unhandled promise rejections
-window.addEventListener('unhandledrejection', (e) => {
-  console.error('[JoyBOT] Unhandled promise rejection:', e.reason);
-  // Reset streaming state if stuck
-  if (state && state.isStreaming) {
-    state.isStreaming = false;
-    try { saveState(); renderMessages(); } catch(ex) {}
-  }
-});
-
-})();
+// ======================================================================
+//  UTILS
+// ======================================================================
+function scrollToBottom() { const c=document.getElementById('messages-container'); c.scrollTop=c.scrollHeight; }
+function escapeHtml(t) { return t.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m]); }
 </script>
 </body>
 </html>
